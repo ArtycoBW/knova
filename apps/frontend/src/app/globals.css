@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));
@@ -28,23 +30,23 @@
 
 :root {
   --background: 0 0% 98%;
-  --foreground: 150 10% 8%;
-  --primary: 152 60% 35%;
+  --foreground: 220 10% 10%;
+  --primary: 152 55% 40%;
   --primary-foreground: 0 0% 98%;
-  --secondary: 150 20% 92%;
-  --secondary-foreground: 150 10% 20%;
-  --accent: 160 80% 42%;
+  --secondary: 220 15% 93%;
+  --secondary-foreground: 220 10% 20%;
+  --accent: 152 50% 45%;
   --accent-foreground: 0 0% 98%;
-  --muted: 150 10% 94%;
-  --muted-foreground: 150 8% 46%;
+  --muted: 220 10% 94%;
+  --muted-foreground: 220 8% 46%;
   --card: 0 0% 100%;
-  --card-foreground: 150 10% 8%;
-  --border: 150 20% 88%;
-  --input: 150 20% 88%;
-  --ring: 152 60% 35%;
+  --card-foreground: 220 10% 10%;
+  --border: 220 15% 90%;
+  --input: 220 15% 90%;
+  --ring: 152 55% 40%;
   --radius: 0.75rem;
   --popover: 0 0% 100%;
-  --popover-foreground: 150 10% 8%;
+  --popover-foreground: 220 10% 10%;
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 98%;
 
@@ -53,28 +55,69 @@
 }
 
 .dark {
-  --background: 150 15% 5%;
-  --foreground: 150 5% 95%;
+  --background: 0 0% 4%;
+  --foreground: 0 0% 95%;
   --primary: 152 55% 45%;
   --primary-foreground: 0 0% 5%;
-  --secondary: 150 15% 12%;
-  --secondary-foreground: 150 5% 85%;
-  --accent: 160 70% 50%;
+  --secondary: 0 0% 10%;
+  --secondary-foreground: 0 0% 85%;
+  --accent: 152 50% 50%;
   --accent-foreground: 0 0% 5%;
-  --muted: 150 15% 10%;
-  --muted-foreground: 150 8% 55%;
-  --card: 150 15% 7%;
-  --card-foreground: 150 5% 95%;
-  --border: 150 15% 15%;
-  --input: 150 15% 15%;
+  --muted: 0 0% 10%;
+  --muted-foreground: 0 0% 55%;
+  --card: 0 0% 7%;
+  --card-foreground: 0 0% 95%;
+  --border: 0 0% 14%;
+  --input: 0 0% 14%;
   --ring: 152 55% 45%;
-  --popover: 150 15% 7%;
-  --popover-foreground: 150 5% 95%;
+  --popover: 0 0% 7%;
+  --popover-foreground: 0 0% 95%;
   --destructive: 0 62% 50%;
   --destructive-foreground: 0 0% 98%;
 
-  --glass-bg: rgba(10, 20, 15, 0.7);
+  --glass-bg: rgba(10, 10, 10, 0.7);
   --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes marquee-reverse {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes scroll-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(8px);
+    opacity: 0.3;
+  }
+}
+
+@keyframes shine {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
 }
 
 @layer base {
