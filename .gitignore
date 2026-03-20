@@ -1,0 +1,70 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
+.next/
+out/
+dist/
+build/
+.turbo/
+
+# Environment
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Docker volumes
+nginx/certs/
+postgres_data/
+redis_data/
+ollama_data/
+
+# Uploads
+apps/backend/uploads/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# ML models
+apps/ml/models/
+*.onnx
+*.bin
+*.safetensors
+
+# Prisma
+apps/backend/prisma/dev.db
+
+# Coverage
+coverage/
+.nyc_output
+
+# Certificates
+*.pem
+*.key
+*.crt
+
+# Temp
+*.tmp
+*.bak
+.cache/
