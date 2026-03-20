@@ -2,6 +2,9 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
 import { PrismaModule } from "./modules/prisma/prisma.module";
+import { QueueModule } from "./modules/queue/queue.module";
+import { LlmModule } from "./modules/llm/llm.module";
+import { BullBoardPlugin } from "./modules/queue/bull-board.plugin";
 
 @Module({
   imports: [
@@ -16,8 +19,10 @@ import { PrismaModule } from "./modules/prisma/prisma.module";
       },
     ]),
     PrismaModule,
+    QueueModule,
+    LlmModule,
   ],
   controllers: [],
-  providers: [],
+  providers: [BullBoardPlugin],
 })
 export class AppModule {}
