@@ -1,0 +1,279 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pgvector(map: "vector")]
+}
+
+model User {
+  id                String             @id @default(cuid())
+  email             String             @unique
+  password          String
+  firstName         String?
+  lastName          String?
+  organization      String?
+  role              UserRole           @default(STUDENT)
+  isVerified        Boolean            @default(false)
+  avatarUrl         String?
+  bio               String?
+  onboardingDone    Boolean            @default(false)
+  xp                Int                @default(0)
+  level             Int                @default(1)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  workspaces        Workspace[]
+  sessions          Session[]
+  verificationCodes VerificationCode[]
+  badges            Badge[]
+  notifications     Notification[]
+}
+
+enum UserRole {
+  STUDENT
+  SCIENTIST
+  OFFICIAL
+  OTHER
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  code      String
+  email     String
+  userId    String?
+  type      CodeType
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum CodeType {
+  REGISTER
+  LOGIN
+  RESET_PASSWORD
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Workspace {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  userId        String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documents     Document[]
+  chatSessions  ChatSession[]
+  mindmaps      Mindmap[]
+  podcasts      Podcast[]
+  quizzes       Quiz[]
+  reports       Report[]
+  infographics  Infographic[]
+  dataExtracts  DataExtract[]
+  presentations Presentation[]
+}
+
+model Document {
+  id            String         @id @default(cuid())
+  name          String
+  originalName  String
+  mimeType      String
+  size          Int
+  path          String
+  workspaceId   String
+  sourceType    DocumentSource @default(FILE)
+  status        DocumentStatus @default(PENDING)
+  pageCount     Int?
+  duration      Int?
+  extractedText String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  workspace     Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  chunks        DocumentChunk[]
+}
+
+enum DocumentSource {
+  FILE
+  AUDIO
+  VIDEO
+  URL
+}
+
+enum DocumentStatus {
+  PENDING
+  PROCESSING
+  READY
+  ERROR
+}
+
+model DocumentChunk {
+  id         String                      @id @default(cuid())
+  documentId String
+  content    String
+  chunkIndex Int
+  pageNumber Int?
+  embedding  Unsupported("vector(768)")?
+  metadata   Json?
+  createdAt  DateTime                    @default(now())
+  document   Document                    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model ChatSession {
+  id          String        @id @default(cuid())
+  workspaceId String
+  title       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messages    ChatMessage[]
+}
+
+model ChatMessage {
+  id        String      @id @default(cuid())
+  sessionId String
+  role      MessageRole
+  content   String
+  sources   Json?
+  audioPath String?
+  createdAt DateTime    @default(now())
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model Mindmap {
+  id          String           @id @default(cuid())
+  workspaceId String
+  title       String
+  data        Json
+  status      GenerationStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Podcast {
+  id          String           @id @default(cuid())
+  workspaceId String
+  title       String
+  script      Json
+  audioUrl    String?
+  status      GenerationStatus @default(PENDING)
+  settings    Json?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Quiz {
+  id          String           @id @default(cuid())
+  workspaceId String
+  title       String
+  questions   Json
+  status      GenerationStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id          String           @id @default(cuid())
+  workspaceId String
+  title       String
+  content     String
+  template    String?
+  status      GenerationStatus @default(PENDING)
+  filePath    String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Infographic {
+  id          String           @id @default(cuid())
+  workspaceId String
+  title       String
+  chartData   Json
+  chartType   String
+  status      GenerationStatus @default(PENDING)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model DataExtract {
+  id          String           @id @default(cuid())
+  workspaceId String
+  title       String
+  tableData   Json
+  status      GenerationStatus @default(PENDING)
+  csvPath     String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Presentation {
+  id          String           @id @default(cuid())
+  workspaceId String
+  title       String
+  slides      Json
+  status      GenerationStatus @default(PENDING)
+  filePath    String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+}
+
+model Badge {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String
+  icon        String
+  xpReward    Int      @default(0)
+  earnedAt    DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  metadata  Json?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum NotificationType {
+  DOCUMENT_READY
+  GENERATION_COMPLETE
+  BADGE_EARNED
+  SYSTEM
+}
+
+enum GenerationStatus {
+  PENDING
+  GENERATING
+  READY
+  ERROR
+}

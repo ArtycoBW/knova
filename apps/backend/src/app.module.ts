@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { ThrottlerModule } from "@nestjs/throttler";
+import { PrismaModule } from "./modules/prisma/prisma.module";
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ThrottlerModule } from "@nestjs/throttler";
         limit: 60,
       },
     ]),
+    PrismaModule,
   ],
   controllers: [],
   providers: [],
