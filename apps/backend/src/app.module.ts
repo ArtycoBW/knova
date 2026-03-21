@@ -11,6 +11,7 @@ import { WorkspacesModule } from "./modules/workspaces/workspaces.module";
 import { DocumentsModule } from "./modules/documents/documents.module";
 import { ChatModule } from "./modules/chat/chat.module";
 import { MindmapModule } from "./modules/mindmap/mindmap.module";
+import { PodcastModule } from "./modules/podcast/podcast.module";
 import { SearchModule } from "./modules/search/search.module";
 import { BullBoardPlugin } from "./modules/queue/bull-board.plugin";
 import { SettingsController } from "./modules/auth/settings.controller";
@@ -36,6 +37,7 @@ import { SettingsController } from "./modules/auth/settings.controller";
     DocumentsModule,
     ChatModule,
     MindmapModule,
+    PodcastModule,
     SearchModule,
   ],
   controllers: [SettingsController],

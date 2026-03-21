@@ -35,7 +35,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
           <DialogTitle>Новый воркспейс</DialogTitle>
         </DialogHeader>
         <div className="space-y-5">
-          <div className="space-y-2.5!">
+          <div className="flex flex-col gap-y-2">
             <Label htmlFor="ws-name">Название *</Label>
             <Input
               id="ws-name"
@@ -46,7 +46,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
               placeholder="Диплом по ИИ..."
             />
           </div>
-          <div className="space-y-2.5!">
+          <div className="flex flex-col gap-y-2">
             <Label htmlFor="ws-desc">Описание (необязательно)</Label>
             <Textarea
               id="ws-desc"

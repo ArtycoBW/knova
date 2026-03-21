@@ -23,7 +23,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const isCanvasRoute =
-    pathname.startsWith("/chat/") || pathname.startsWith("/mindmap/");
+    pathname.startsWith("/chat/") ||
+    pathname.startsWith("/mindmap/") ||
+    pathname.startsWith("/podcast/");
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
