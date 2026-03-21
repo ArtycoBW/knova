@@ -1,10 +1,14 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
-import { ThrottlerModule } from "@nestjs/throttler";
+import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
+import { APP_GUARD } from "@nestjs/core";
 import { PrismaModule } from "./modules/prisma/prisma.module";
 import { QueueModule } from "./modules/queue/queue.module";
 import { LlmModule } from "./modules/llm/llm.module";
+import { AuthModule } from "./modules/auth/auth.module";
+import { UsersModule } from "./modules/users/users.module";
 import { BullBoardPlugin } from "./modules/queue/bull-board.plugin";
+import { SettingsController } from "./modules/auth/settings.controller";
 
 @Module({
   imports: [
@@ -21,8 +25,16 @@ import { BullBoardPlugin } from "./modules/queue/bull-board.plugin";
     PrismaModule,
     QueueModule,
     LlmModule,
+    AuthModule,
+    UsersModule,
   ],
-  controllers: [],
-  providers: [BullBoardPlugin],
+  controllers: [SettingsController],
+  providers: [
+    BullBoardPlugin,
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
+  ],
 })
 export class AppModule {}

@@ -17,7 +17,7 @@ interface ChatOptions {
   maxTokens?: number;
 }
 
-interface ProviderInfo {
+export interface ProviderInfo {
   provider: LlmProvider;
   model: string;
   sttAvailable: boolean;

@@ -16,6 +16,7 @@
   "dependencies": {
     "@bull-board/api": "^6.20.6",
     "@bull-board/fastify": "^6.20.6",
+    "@fastify/helmet": "^13.0.2",
     "@fastify/static": "^9.0.0",
     "@fastify/swagger": "^9.7.0",
     "@langchain/community": "^0.3.0",
