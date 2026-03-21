@@ -35,11 +35,9 @@ export class AuthController {
   }
 
   @Put("register/profile")
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: "Регистрация — шаг 3: заполнение профиля" })
-  registerProfile(@Req() req: { user: { id: string } }, @Body() dto: RegisterProfileDto) {
-    return this.authService.registerProfile(req.user.id, dto);
+  registerProfile(@Body() dto: RegisterProfileDto) {
+    return this.authService.registerProfile(dto.userId, dto);
   }
 
   @Post("login")

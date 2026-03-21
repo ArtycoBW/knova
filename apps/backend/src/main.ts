@@ -15,13 +15,16 @@ async function bootstrap() {
     new FastifyAdapter(),
   );
 
-  await app.register(helmet, {
-    contentSecurityPolicy: false,
+  app.enableCors({
+    origin: true,
+    credentials: true,
+    methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "Accept"],
   });
 
-  app.enableCors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
-    credentials: true,
+  await app.register(helmet, {
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: false,
   });
 
   app.useGlobalPipes(

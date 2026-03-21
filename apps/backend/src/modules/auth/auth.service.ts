@@ -47,14 +47,18 @@ export class AuthService {
   }
 
   async registerVerify(dto: VerifyCodeDto) {
-    const record = await this.validateCode(dto.email, dto.code, CodeType.REGISTER);
+    await this.validateCode(dto.email, dto.code, CodeType.REGISTER);
+
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { email: dto.email },
+    });
 
     await this.prisma.user.update({
-      where: { id: record.userId! },
+      where: { id: user.id },
       data: { isVerified: true },
     });
 
-    return { userId: record.userId, step: "profile" };
+    return { userId: user.id, step: "profile" };
   }
 
   async registerProfile(userId: string, dto: RegisterProfileDto) {

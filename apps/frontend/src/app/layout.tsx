@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Syne, Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/providers/theme-provider";
+import { ToastProvider } from "@/providers/toast-provider";
+import { QueryProvider } from "@/providers/query-provider";
 import "./globals.css";
 
 const syne = Syne({
@@ -44,7 +46,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <QueryProvider>
+            <ToastProvider>
+              {children}
+            </ToastProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>
