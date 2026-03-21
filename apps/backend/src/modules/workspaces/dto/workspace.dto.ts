@@ -1,4 +1,11 @@
-import { IsString, IsOptional, MinLength } from "class-validator";
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsOptional,
+  IsString,
+  MinLength,
+} from "class-validator";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class CreateWorkspaceDto {
@@ -24,4 +31,16 @@ export class UpdateWorkspaceDto {
   @IsOptional()
   @IsString()
   description?: string;
+}
+
+export class CompareDocumentsDto {
+  @ApiProperty({
+    type: [String],
+    example: ["cmn-doc-1", "cmn-doc-2"],
+  })
+  @IsArray()
+  @ArrayMinSize(2)
+  @ArrayMaxSize(2)
+  @IsString({ each: true })
+  documentIds: string[];
 }

@@ -53,14 +53,36 @@ export class EmbeddingService {
   }
 
   async embed(text: string): Promise<number[]> {
-    return this.embedder.embedQuery(text);
+    const embedding = await this.embedder.embedQuery(text);
+    return this.normalizeDimensions(embedding);
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
-    return this.embedder.embedDocuments(texts);
+    const embeddings = await this.embedder.embedDocuments(texts);
+    return embeddings.map((embedding) => this.normalizeDimensions(embedding));
   }
 
   getDimensions(): number {
-    return this.config.get<number>("EMBEDDING_DIMENSIONS", 768);
+    return Number(this.config.get("EMBEDDING_DIMENSIONS", 1024));
+  }
+
+  private normalizeDimensions(embedding: number[]): number[] {
+    const dimensions = this.getDimensions();
+
+    if (embedding.length === dimensions) {
+      return embedding;
+    }
+
+    if (embedding.length > dimensions) {
+      this.logger.warn(
+        `Embedding dimensions ${embedding.length} exceed configured ${dimensions}, truncating`,
+      );
+      return embedding.slice(0, dimensions);
+    }
+
+    this.logger.warn(
+      `Embedding dimensions ${embedding.length} below configured ${dimensions}, padding`,
+    );
+    return [...embedding, ...Array(dimensions - embedding.length).fill(0)];
   }
 }

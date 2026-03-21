@@ -9,6 +9,7 @@ import { AuthModule } from "./modules/auth/auth.module";
 import { UsersModule } from "./modules/users/users.module";
 import { WorkspacesModule } from "./modules/workspaces/workspaces.module";
 import { DocumentsModule } from "./modules/documents/documents.module";
+import { SearchModule } from "./modules/search/search.module";
 import { BullBoardPlugin } from "./modules/queue/bull-board.plugin";
 import { SettingsController } from "./modules/auth/settings.controller";
 
@@ -31,6 +32,7 @@ import { SettingsController } from "./modules/auth/settings.controller";
     UsersModule,
     WorkspacesModule,
     DocumentsModule,
+    SearchModule,
   ],
   controllers: [SettingsController],
   providers: [

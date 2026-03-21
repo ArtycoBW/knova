@@ -27,7 +27,22 @@ export interface Document {
   status: "PENDING" | "PROCESSING" | "READY" | "ERROR";
   pageCount?: number;
   duration?: number;
+  extractedText?: string | null;
   createdAt: string;
+}
+
+export interface WorkspaceComparison {
+  comparison: {
+    documents: Array<{
+      id: string;
+      name: string;
+      sourceType: "FILE" | "AUDIO" | "VIDEO";
+      excerpt: string;
+    }>;
+    similarity: number;
+    commonTopics: string[];
+    uniqueTopics: Record<string, string[]>;
+  };
 }
 
 export function useWorkspaces() {
@@ -162,5 +177,16 @@ export function useDeleteDocument(workspaceId: string) {
       });
     },
     onError: (err) => toast.show({ variant: "error", title: "Ошибка", message: getErrorMessage(err) }),
+  });
+}
+
+export function useCompareDocuments(workspaceId: string) {
+  const toast = useToast();
+
+  return useMutation<WorkspaceComparison, Error, string[]>({
+    mutationFn: (documentIds: string[]) =>
+      api.post(`/workspaces/${workspaceId}/compare`, { documentIds }).then((r) => r.data),
+    onError: (err) =>
+      toast.show({ variant: "error", title: "Не удалось сравнить", message: getErrorMessage(err) }),
   });
 }

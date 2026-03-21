@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   ConflictException,
 } from "@nestjs/common";
+import { randomUUID } from "crypto";
 import { ConfigService } from "@nestjs/config";
 import { JwtService } from "@nestjs/jwt";
 import * as bcrypt from "bcrypt";
@@ -11,7 +12,7 @@ import { PrismaService } from "../prisma/prisma.service";
 import { RegisterDto, VerifyCodeDto, RegisterProfileDto } from "./dto/register.dto";
 import { LoginDto, LoginVerifyDto } from "./dto/login.dto";
 import { ResetPasswordDto, ResetPasswordConfirmDto } from "./dto/reset-password.dto";
-import { CodeType, UserRole } from "@prisma/client";
+import { CodeType, Prisma, UserRole } from "@prisma/client";
 
 @Injectable()
 export class AuthService {
@@ -226,23 +227,37 @@ export class AuthService {
       },
     );
 
-    const refreshToken = this.jwt.sign(
-      { sub: userId },
-      {
-        secret: this.config.get("JWT_REFRESH_SECRET"),
-        expiresIn: this.config.get("JWT_REFRESH_EXPIRES_IN", "30d"),
-      },
-    );
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const refreshToken = this.jwt.sign(
+        { sub: userId },
+        {
+          secret: this.config.get("JWT_REFRESH_SECRET"),
+          expiresIn: this.config.get("JWT_REFRESH_EXPIRES_IN", "30d"),
+          jwtid: randomUUID(),
+        },
+      );
 
-    await this.prisma.session.create({
-      data: {
-        userId,
-        refreshToken,
-        expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      },
-    });
+      try {
+        await this.prisma.session.create({
+          data: {
+            userId,
+            refreshToken,
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          },
+        });
 
-    return { accessToken, refreshToken };
+        return { accessToken, refreshToken };
+      } catch (error) {
+        if (
+          !(error instanceof Prisma.PrismaClientKnownRequestError) ||
+          error.code !== "P2002"
+        ) {
+          throw error;
+        }
+      }
+    }
+
+    throw new ConflictException("Не удалось создать сессию");
   }
 
   private sanitizeUser(user: {

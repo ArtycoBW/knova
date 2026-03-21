@@ -6,6 +6,19 @@ import { api, getErrorMessage } from "@/lib/api";
 import { useAuthStore } from "@/store/auth.store";
 import { useToast } from "@/providers/toast-provider";
 
+function getPostAuthRedirect() {
+  if (typeof window === "undefined") {
+    return "/dashboard";
+  }
+
+  const redirect = new URLSearchParams(window.location.search).get("redirect");
+  if (!redirect || !redirect.startsWith("/")) {
+    return "/dashboard";
+  }
+
+  return redirect;
+}
+
 export function useMe() {
   const initFromStorage = useAuthStore((s) => s.initFromStorage);
   const setUser = useAuthStore((s) => s.setUser);
@@ -65,7 +78,7 @@ export function useRegisterProfile() {
       setAuth(data.user, data.accessToken, data.refreshToken);
       qc.setQueryData(["me"], data.user);
       toast.show({ variant: "success", title: "Добро пожаловать!", message: data.user.firstName || data.user.email });
-      router.push("/dashboard");
+      router.push(getPostAuthRedirect());
     },
     onError: (error) => {
       toast.show({ variant: "error", title: "Ошибка", message: getErrorMessage(error) });
@@ -98,7 +111,7 @@ export function useLoginVerify() {
       setAuth(data.user, data.accessToken, data.refreshToken);
       qc.setQueryData(["me"], data.user);
       toast.show({ variant: "success", title: "Добро пожаловать!", message: data.user?.firstName || "" });
-      router.push("/dashboard");
+      router.push(getPostAuthRedirect());
     },
     onError: (error) => {
       toast.show({ variant: "error", title: "Неверный код", message: getErrorMessage(error) });

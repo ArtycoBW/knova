@@ -1,44 +1,88 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
-import { useState, useRef } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
+import {
+  useParams,
+  usePathname,
+  useRouter,
+  useSearchParams,
+} from "next/navigation";
 import { motion } from "framer-motion";
 import {
-  ArrowLeft, Upload, Mic, Video, FileText, Trash2,
-  MessageSquare, GitFork, Podcast, CheckSquare,
-  FileOutput, BarChart2, Table2, Presentation,
-  Loader2, CheckCircle2, AlertCircle, Clock, RefreshCw,
+  ArrowLeft,
+  BarChart2,
+  CheckCircle2,
+  CheckSquare,
+  Clock,
+  FileOutput,
+  FileText,
+  GitCompareArrows,
+  GitFork,
+  Loader2,
+  MessageSquare,
+  Mic,
+  Pencil,
+  Podcast,
+  Presentation,
+  RefreshCw,
+  Table2,
+  Trash2,
+  Video,
+  AlertCircle,
 } from "lucide-react";
-import { useWorkspace, useDocuments, useUploadDocument, useDeleteDocument, useDeleteWorkspace } from "@/hooks/use-workspaces";
+import {
+  useCompareDocuments,
+  useDeleteDocument,
+  useDeleteWorkspace,
+  useDocuments,
+  useUpdateWorkspace,
+  useUploadDocument,
+  useWorkspace,
+} from "@/hooks/use-workspaces";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { PdfViewer } from "@/components/ui/pdf-viewer";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 import type { Document } from "@/hooks/use-workspaces";
 
 const STATUS_ICON: Record<Document["status"], React.ReactNode> = {
-  PENDING: <Clock className="h-4 w-4 text-muted-foreground animate-pulse" />,
-  PROCESSING: <Loader2 className="h-4 w-4 text-amber-400 animate-spin" />,
+  PENDING: <Clock className="h-4 w-4 animate-pulse text-muted-foreground" />,
+  PROCESSING: <Loader2 className="h-4 w-4 animate-spin text-amber-400" />,
   READY: <CheckCircle2 className="h-4 w-4 text-primary" />,
   ERROR: <AlertCircle className="h-4 w-4 text-destructive" />,
 };
 
 const STATUS_LABEL: Record<Document["status"], string> = {
   PENDING: "В очереди",
-  PROCESSING: "Обработка...",
+  PROCESSING: "Обработка",
   READY: "Готов",
   ERROR: "Ошибка",
 };
+
+const GENERATORS = [
+  { href: "chat", icon: MessageSquare, label: "Чат", color: "hover:border-primary/40 hover:bg-primary/10" },
+  { href: "mindmap", icon: GitFork, label: "Карта знаний", color: "hover:border-violet-500/40 hover:bg-violet-500/10" },
+  { href: "podcast", icon: Podcast, label: "Подкаст", color: "hover:border-pink-500/40 hover:bg-pink-500/10" },
+  { href: "quiz", icon: CheckSquare, label: "Тест", color: "hover:border-amber-500/40 hover:bg-amber-500/10" },
+  { href: "reports", icon: FileOutput, label: "Отчёт", color: "hover:border-blue-500/40 hover:bg-blue-500/10" },
+  { href: "infographic", icon: BarChart2, label: "Инфографика", color: "hover:border-cyan-500/40 hover:bg-cyan-500/10" },
+  { href: "table", icon: Table2, label: "Таблица", color: "hover:border-green-500/40 hover:bg-green-500/10" },
+  { href: "presentation", icon: Presentation, label: "Презентация", color: "hover:border-orange-500/40 hover:bg-orange-500/10" },
+];
 
 function formatSize(bytes: number) {
   if (bytes < 1024) return `${bytes} Б`;
@@ -59,20 +103,268 @@ function getDocIcon(doc: Document) {
   return <FileText className="h-5 w-5 text-primary" />;
 }
 
-const GENERATORS = [
-  { href: "chat", icon: MessageSquare, label: "Чат", color: "hover:bg-primary/10 hover:border-primary/40" },
-  { href: "mindmap", icon: GitFork, label: "Mindmap", color: "hover:bg-violet-500/10 hover:border-violet-500/40" },
-  { href: "podcast", icon: Podcast, label: "Подкаст", color: "hover:bg-pink-500/10 hover:border-pink-500/40" },
-  { href: "quiz", icon: CheckSquare, label: "Тест", color: "hover:bg-amber-500/10 hover:border-amber-500/40" },
-  { href: "reports", icon: FileOutput, label: "Отчёт", color: "hover:bg-blue-500/10 hover:border-blue-500/40" },
-  { href: "infographic", icon: BarChart2, label: "Инфографика", color: "hover:bg-cyan-500/10 hover:border-cyan-500/40" },
-  { href: "table", icon: Table2, label: "Таблица", color: "hover:bg-green-500/10 hover:border-green-500/40" },
-  { href: "presentation", icon: Presentation, label: "Презентация", color: "hover:bg-orange-500/10 hover:border-orange-500/40" },
-];
+function getDocumentExcerpt(doc: Document) {
+  return doc.extractedText?.replace(/\s+/g, " ").trim().slice(0, 180);
+}
 
-export default function WorkspacePage() {
+function EditWorkspaceDialog({
+  workspace,
+  open,
+  onOpenChange,
+}: {
+  workspace: { id: string; name: string; description?: string | null };
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const updateWorkspace = useUpdateWorkspace(workspace.id);
+  const [name, setName] = useState(workspace.name);
+  const [description, setDescription] = useState(workspace.description ?? "");
+
+  useEffect(() => {
+    setName(workspace.name);
+    setDescription(workspace.description ?? "");
+  }, [workspace.description, workspace.name]);
+
+  const handleSave = async () => {
+    await updateWorkspace.mutateAsync({
+      name,
+      description,
+    });
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Редактировать воркспейс</DialogTitle>
+          <DialogDescription>
+            Обновите название и описание, чтобы быстрее ориентироваться в материалах.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="workspace-name">Название</Label>
+            <Input
+              id="workspace-name"
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Новый воркспейс"
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="workspace-description">Описание</Label>
+            <Textarea
+              id="workspace-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              rows={4}
+              placeholder="Кратко опишите, что хранится в этом воркспейсе"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Отмена
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={updateWorkspace.isPending || !name.trim()}
+          >
+            {updateWorkspace.isPending ? "Сохраняем..." : "Сохранить"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CompareDialog({
+  open,
+  onOpenChange,
+  workspaceId,
+  documents,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  workspaceId: string;
+  documents: Document[];
+}) {
+  const compare = useCompareDocuments(workspaceId);
+  const [selected, setSelected] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!open) {
+      setSelected([]);
+      compare.reset();
+    }
+  }, [compare, open]);
+
+  const toggleDocument = (documentId: string) => {
+    setSelected((current) => {
+      if (current.includes(documentId)) {
+        return current.filter((id) => id !== documentId);
+      }
+
+      if (current.length === 2) {
+        return [current[1], documentId];
+      }
+
+      return [...current, documentId];
+    });
+  };
+
+  const readyDocuments = documents.filter((document) => document.status === "READY");
+  const comparison = compare.data?.comparison;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>Сравнить документы</DialogTitle>
+          <DialogDescription>
+            Выберите два готовых источника и получите краткое сравнение по темам.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_1.4fr]">
+          <div className="space-y-2">
+            {readyDocuments.map((document) => (
+              <button
+                key={document.id}
+                type="button"
+                onClick={() => toggleDocument(document.id)}
+                className={`w-full rounded-xl border p-3 text-left transition-colors ${
+                  selected.includes(document.id)
+                    ? "border-primary bg-primary/10"
+                    : "border-border hover:bg-muted/30"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  {getDocIcon(document)}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{document.originalName}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {document.pageCount ? `${document.pageCount} стр.` : formatDuration(document.duration) || "Готов к сравнению"}
+                    </p>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+
+          <div className="rounded-2xl border border-border bg-muted/20 p-4">
+            {!comparison ? (
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Выберите два документа и запустите сравнение.
+                </p>
+                <Button
+                  onClick={() => compare.mutate(selected)}
+                  disabled={selected.length !== 2 || compare.isPending}
+                >
+                  {compare.isPending ? "Сравниваем..." : "Запустить сравнение"}
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Совпадение тем</p>
+                    <p className="text-3xl font-bold text-primary">{comparison.similarity}%</p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => compare.mutate(selected)}
+                    disabled={compare.isPending}
+                  >
+                    Пересчитать
+                  </Button>
+                </div>
+
+                <div>
+                  <p className="mb-2 text-sm font-medium">Общие темы</p>
+                  <div className="flex flex-wrap gap-2">
+                    {comparison.commonTopics.length ? (
+                      comparison.commonTopics.map((topic) => (
+                        <Badge key={topic} variant="secondary">
+                          {topic}
+                        </Badge>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground">Сильных пересечений не найдено.</p>
+                    )}
+                  </div>
+                </div>
+
+                {comparison.documents.map((document) => (
+                  <div key={document.id} className="rounded-xl border border-border bg-card p-4">
+                    <p className="text-sm font-semibold">{document.name}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{document.excerpt}</p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(comparison.uniqueTopics[document.id] || []).map((topic) => (
+                        <Badge key={topic} variant="outline">
+                          {topic}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DocumentPreviewDialog({
+  document,
+  open,
+  onOpenChange,
+}: {
+  document: Document | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{document?.originalName ?? "Предпросмотр"}</DialogTitle>
+          <DialogDescription>
+            {document
+              ? `${formatSize(document.size)}${document.pageCount ? ` • ${document.pageCount} стр.` : ""}${document.duration ? ` • ${formatDuration(document.duration)}` : ""}`
+              : "Документ недоступен"}
+          </DialogDescription>
+        </DialogHeader>
+
+        {document?.mimeType === "application/pdf" ? (
+          <PdfViewer documentId={document.id} />
+        ) : (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border bg-muted/20 p-4">
+              <p className="mb-2 text-sm font-medium">Краткое содержание</p>
+              <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+                {document?.extractedText?.trim() || "Текст документа пока недоступен."}
+              </p>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function WorkspacePageContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data: workspace, isLoading: wsLoading } = useWorkspace(id);
@@ -84,50 +376,105 @@ export default function WorkspacePage() {
   const [dragOver, setDragOver] = useState(false);
   const [deleteDocId, setDeleteDocId] = useState<string | null>(null);
   const [showDeleteWs, setShowDeleteWs] = useState(false);
+  const [showEditWs, setShowEditWs] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+
+  const readyDocuments = documents?.filter((document) => document.status === "READY") ?? [];
+  const hasReadyDocs = readyDocuments.length > 0;
+  const canCompare = readyDocuments.length >= 2;
+
+  const updateDocumentQuery = (documentId?: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (documentId) {
+      params.set("documentId", documentId);
+    } else {
+      params.delete("documentId");
+    }
+
+    const next = params.toString();
+    router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+  };
 
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
-    Array.from(files).forEach((f) => upload.mutate(f));
+    Array.from(files).forEach((file) => upload.mutate(file));
+    if (fileRef.current) {
+      fileRef.current.value = "";
+    }
   };
 
-  const hasReadyDocs = documents?.some((d) => d.status === "READY");
+  const handlePickFiles = (accept = ".pdf,.docx,.txt,.md,.mp3,.wav,.ogg,.m4a,.mp4") => {
+    if (!fileRef.current) return;
+    fileRef.current.accept = accept;
+    fileRef.current.click();
+  };
+
+  useEffect(() => {
+    const documentId = searchParams.get("documentId");
+    if (!documentId || !documents?.length) {
+      return;
+    }
+
+    const nextDocument = documents.find((document) => document.id === documentId);
+    if (nextDocument && nextDocument.status === "READY") {
+      setSelectedDocument((current) =>
+        current?.id === nextDocument.id ? current : nextDocument,
+      );
+    }
+  }, [documents, searchParams]);
 
   if (wsLoading) {
     return (
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="mx-auto max-w-5xl space-y-6">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-48 rounded-2xl" />
-        <Skeleton className="h-32 rounded-2xl" />
+        <Skeleton className="h-40 rounded-2xl" />
       </div>
     );
   }
 
   if (!workspace) {
-    return <div className="text-muted-foreground p-8">Воркспейс не найден</div>;
+    return <div className="p-8 text-muted-foreground">Воркспейс не найден</div>;
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => router.back()}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <div className="flex-1">
-          <h1 className="text-xl font-bold font-[Syne]">{workspace.name}</h1>
+          <h1 className="font-[Syne] text-xl font-bold">{workspace.name}</h1>
           {workspace.description && (
             <p className="text-sm text-muted-foreground">{workspace.description}</p>
           )}
         </div>
-        <Button variant="ghost" size="icon" onClick={() => setShowDeleteWs(true)} className="text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+        <Button variant="ghost" size="icon" onClick={() => setShowEditWs(true)}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setShowDeleteWs(true)}
+          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+        >
           <Trash2 className="h-4 w-4" />
         </Button>
       </div>
 
       <div
         data-tour="upload-documents"
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          setDragOver(true);
+        }}
         onDragLeave={() => setDragOver(false)}
-        onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files); }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragOver(false);
+          handleFiles(event.dataTransfer.files);
+        }}
         className={`rounded-2xl border-2 border-dashed p-8 text-center transition-colors ${
           dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
         }`}
@@ -138,91 +485,183 @@ export default function WorkspacePage() {
           multiple
           accept=".pdf,.docx,.txt,.md,.mp3,.wav,.ogg,.m4a,.mp4"
           className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
+          onChange={(event) => handleFiles(event.target.files)}
         />
-        <Upload className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-        <p className="text-sm font-medium mb-1">Перетащите файлы или</p>
-        <p className="text-xs text-muted-foreground mb-4">PDF, DOCX, TXT, MD, MP3, WAV, OGG, MP4</p>
-        <div className="flex justify-center gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-            <FileText className="h-3.5 w-3.5 mr-1.5" /> Документ
+        <FileText className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+        <p className="mb-1 text-sm font-medium">Добавьте новые источники</p>
+        <p className="mb-4 text-xs text-muted-foreground">
+          Поддерживаются PDF, DOCX, TXT, MP3, WAV, OGG, M4A и MP4
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => handlePickFiles(".pdf,.docx,.txt,.md")}>
+            <FileText className="mr-1.5 h-3.5 w-3.5" /> Документ
           </Button>
-          <Button variant="outline" size="sm" onClick={() => { if (fileRef.current) { fileRef.current.accept = ".mp3,.wav,.ogg,.m4a"; fileRef.current.click(); } }} className="hover:border-violet-500/50">
-            <Mic className="h-3.5 w-3.5 mr-1.5 text-violet-400" /> Аудио
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePickFiles(".mp3,.wav,.ogg,.m4a")}
+            className="hover:border-violet-500/50"
+          >
+            <Mic className="mr-1.5 h-3.5 w-3.5 text-violet-400" /> Аудио
           </Button>
-          <Button variant="outline" size="sm" onClick={() => { if (fileRef.current) { fileRef.current.accept = ".mp4"; fileRef.current.click(); } }} className="hover:border-blue-500/50">
-            <Video className="h-3.5 w-3.5 mr-1.5 text-blue-400" /> Видео
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handlePickFiles(".mp4")}
+            className="hover:border-blue-500/50"
+          >
+            <Video className="mr-1.5 h-3.5 w-3.5 text-blue-400" /> Видео
           </Button>
         </div>
         {upload.isPending && (
-          <p className="mt-3 text-xs text-primary animate-pulse">Загружаем...</p>
+          <p className="mt-3 animate-pulse text-xs text-primary">Загружаем источник...</p>
         )}
       </div>
 
       {(docsLoading || documents?.length) ? (
         <div className="space-y-2">
-          <h2 className="text-sm font-semibold text-muted-foreground">Источники</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-muted-foreground">Источники</h2>
+            {documents?.length ? (
+              <p className="text-xs text-muted-foreground">
+                {readyDocuments.length} из {documents.length} готовы
+              </p>
+            ) : null}
+          </div>
+
           {docsLoading ? (
-            Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-16 rounded-xl" />)
-          ) : (
-            documents?.map((doc) => (
-              <motion.div
-                key={doc.id}
-                layout
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-3 rounded-xl border border-border bg-card p-3"
-              >
-                {getDocIcon(doc)}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{doc.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatSize(doc.size)}
-                    {doc.duration && ` · ${formatDuration(doc.duration)}`}
-                    {doc.pageCount && ` · ${doc.pageCount} стр.`}
-                    {" · "}
-                    {formatDistanceToNow(new Date(doc.createdAt), { locale: ru, addSuffix: true })}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Badge variant={doc.status === "READY" ? "default" : doc.status === "ERROR" ? "destructive" : "secondary"} className="gap-1 text-xs">
-                    {STATUS_ICON[doc.status]}
-                    <span className="hidden sm:inline">{STATUS_LABEL[doc.status]}</span>
-                  </Badge>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10" onClick={() => setDeleteDocId(doc.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </motion.div>
+            Array.from({ length: 3 }).map((_, index) => (
+              <Skeleton key={index} className="h-20 rounded-xl" />
             ))
+          ) : (
+            documents?.map((document) => {
+              const excerpt = getDocumentExcerpt(document);
+
+              return (
+                <motion.div
+                  key={document.id}
+                  layout
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  onClick={() => {
+                    if (document.status !== "READY") return;
+                    setSelectedDocument(document);
+                    updateDocumentQuery(document.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      if (document.status !== "READY") return;
+                      setSelectedDocument(document);
+                      updateDocumentQuery(document.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={document.status === "READY" ? 0 : -1}
+                  className={`w-full rounded-xl border bg-card p-4 text-left transition-colors ${
+                    document.status === "READY"
+                      ? "border-border hover:border-primary/40 hover:bg-primary/5"
+                      : "border-border"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5">{getDocIcon(document)}</div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{document.originalName}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatSize(document.size)}
+                            {document.duration ? ` • ${formatDuration(document.duration)}` : ""}
+                            {document.pageCount ? ` • ${document.pageCount} стр.` : ""}
+                            {" • "}
+                            {formatDistanceToNow(new Date(document.createdAt), {
+                              locale: ru,
+                              addSuffix: true,
+                            })}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            variant={
+                              document.status === "READY"
+                                ? "default"
+                                : document.status === "ERROR"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                            className="gap-1 text-xs"
+                          >
+                            {STATUS_ICON[document.status]}
+                            <span>{STATUS_LABEL[document.status]}</span>
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setDeleteDocId(document.id);
+                            }}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {excerpt && (
+                        <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">
+                          {excerpt}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })
           )}
         </div>
       ) : null}
 
-      <div>
-        <h2 className="text-sm font-semibold text-muted-foreground mb-3">Создать</h2>
-        {!hasReadyDocs && (
-          <p className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
-            <RefreshCw className="h-3.5 w-3.5" />
-            Загрузите хотя бы один документ, чтобы начать генерацию
-          </p>
-        )}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          {GENERATORS.map((g) => (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-muted-foreground">Создать</h2>
+          {!hasReadyDocs && (
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <RefreshCw className="h-3.5 w-3.5" />
+              Загрузите хотя бы один готовый документ
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          {GENERATORS.map((generator) => (
             <Link
-              key={g.href}
-              href={hasReadyDocs ? `/${g.href}/${id}` : "#"}
-              className={`flex flex-col items-center gap-2 rounded-xl border border-border p-4 text-center transition-all ${
-                hasReadyDocs
-                  ? `cursor-pointer ${g.color}`
-                  : "opacity-50 cursor-not-allowed"
+              key={generator.href}
+              href={hasReadyDocs ? `/${generator.href}/${id}` : "#"}
+              className={`flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-border p-4 text-center transition-all ${
+                hasReadyDocs ? `cursor-pointer ${generator.color}` : "cursor-not-allowed opacity-50"
               }`}
-              onClick={(e) => !hasReadyDocs && e.preventDefault()}
+              onClick={(event) => !hasReadyDocs && event.preventDefault()}
             >
-              <g.icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{g.label}</span>
+              <generator.icon className="h-5 w-5" />
+              <span className="text-xs font-medium">{generator.label}</span>
             </Link>
           ))}
+
+          <button
+            type="button"
+            onClick={() => setShowCompare(true)}
+            disabled={!canCompare}
+            className={`flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-border p-4 text-center transition-all ${
+              canCompare
+                ? "hover:border-emerald-500/40 hover:bg-emerald-500/10"
+                : "cursor-not-allowed opacity-50"
+            }`}
+          >
+            <GitCompareArrows className="h-5 w-5" />
+            <span className="text-xs font-medium">Сравнить документы</span>
+          </button>
         </div>
       </div>
 
@@ -235,13 +674,19 @@ export default function WorkspacePage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDocId(null)}>Отмена</Button>
+            <Button variant="outline" onClick={() => setDeleteDocId(null)}>
+              Отмена
+            </Button>
             <Button
               variant="destructive"
               disabled={deleteDoc.isPending}
               onClick={() => {
                 const docId = deleteDocId!;
                 setDeleteDocId(null);
+                if (selectedDocument?.id === docId) {
+                  setSelectedDocument(null);
+                  updateDocumentQuery(undefined);
+                }
                 deleteDoc.mutate(docId);
               }}
             >
@@ -260,7 +705,9 @@ export default function WorkspacePage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDeleteWs(false)}>Отмена</Button>
+            <Button variant="outline" onClick={() => setShowDeleteWs(false)}>
+              Отмена
+            </Button>
             <Button
               variant="destructive"
               disabled={deleteWs.isPending}
@@ -274,6 +721,38 @@ export default function WorkspacePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EditWorkspaceDialog
+        workspace={workspace}
+        open={showEditWs}
+        onOpenChange={setShowEditWs}
+      />
+
+      <CompareDialog
+        open={showCompare}
+        onOpenChange={setShowCompare}
+        workspaceId={id}
+        documents={documents ?? []}
+      />
+
+      <DocumentPreviewDialog
+        document={selectedDocument}
+        open={!!selectedDocument}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedDocument(null);
+            updateDocumentQuery(undefined);
+          }
+        }}
+      />
     </div>
+  );
+}
+
+export default function WorkspacePage() {
+  return (
+    <Suspense fallback={<div className="mx-auto max-w-5xl space-y-6" />}>
+      <WorkspacePageContent />
+    </Suspense>
   );
 }

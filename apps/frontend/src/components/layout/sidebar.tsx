@@ -17,10 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 const NAV = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard", tour: "dashboard" },
+  { href: "/dashboard", icon: LayoutDashboard, label: "Главная", tour: "dashboard" },
   { href: "/workspaces", icon: FolderOpen, label: "Воркспейсы" },
   { href: "/chat", icon: MessageSquare, label: "Чат", tour: "chat-button" },
-  { href: "/mindmap", icon: GitFork, label: "Mindmap", tour: "mindmap-button" },
+  { href: "/mindmap", icon: GitFork, label: "Карта знаний", tour: "mindmap-button" },
   { href: "/podcast", icon: Mic, label: "Подкасты", tour: "podcast-button" },
   { href: "/quiz", icon: CheckSquare, label: "Тесты" },
   { href: "/reports", icon: FileText, label: "Отчёты" },

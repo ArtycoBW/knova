@@ -1,16 +1,31 @@
 import {
-  Controller, Post, Get, Delete,
-  Param, UseGuards, Req, HttpCode, HttpStatus,
+  BadRequestException,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Post,
+  Req,
+  Res,
+  UseGuards,
 } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiConsumes, ApiBody } from "@nestjs/swagger";
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from "@nestjs/swagger";
+import { FastifyReply, FastifyRequest } from "fastify";
+import * as crypto from "crypto";
+import * as fs from "fs";
+import { createWriteStream } from "fs";
+import * as path from "path";
+import { pipeline } from "stream/promises";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { DocumentsService } from "./documents.service";
-import { FastifyRequest } from "fastify";
-import * as path from "path";
-import * as fs from "fs";
-import * as crypto from "crypto";
-import { pipeline } from "stream/promises";
-import { createWriteStream } from "fs";
 
 interface AuthenticatedRequest extends FastifyRequest {
   user: { id: string };
@@ -26,7 +41,12 @@ export class DocumentsController {
   @Post("workspaces/:workspaceId/documents")
   @ApiOperation({ summary: "Загрузить файл (PDF/DOCX/TXT/MP3/WAV/OGG/MP4)" })
   @ApiConsumes("multipart/form-data")
-  @ApiBody({ schema: { type: "object", properties: { file: { type: "string", format: "binary" } } } })
+  @ApiBody({
+    schema: {
+      type: "object",
+      properties: { file: { type: "string", format: "binary" } },
+    },
+  })
   @HttpCode(HttpStatus.CREATED)
   async upload(
     @Param("workspaceId") workspaceId: string,
@@ -37,7 +57,7 @@ export class DocumentsController {
 
     const data = await req.file();
     if (!data) {
-      throw new Error("Файл не найден в запросе");
+      throw new BadRequestException("Файл не найден в запросе");
     }
 
     const ext = path.extname(data.filename) || "";
@@ -63,6 +83,22 @@ export class DocumentsController {
     @Req() req: AuthenticatedRequest,
   ) {
     return this.documentsService.findByWorkspace(workspaceId, req.user.id);
+  }
+
+  @Get("documents/:id/file")
+  @ApiOperation({ summary: "Получить файл документа" })
+  async getFile(
+    @Param("id") id: string,
+    @Req() req: AuthenticatedRequest,
+    @Res() reply: FastifyReply,
+  ) {
+    const file = await this.documentsService.getFile(id, req.user.id);
+    reply.type(file.mimeType);
+    reply.header(
+      "Content-Disposition",
+      `inline; filename*=UTF-8''${encodeURIComponent(file.originalName)}`,
+    );
+    return reply.send(file.stream);
   }
 
   @Delete("documents/:id")

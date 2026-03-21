@@ -85,8 +85,8 @@ export default function DashboardPage() {
     <div className="max-w-6xl mx-auto space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold font-[Syne]">Dashboard</h1>
-          <p className="text-muted-foreground text-sm mt-1">Управляйте знаниями</p>
+          <h1 className="text-2xl font-bold font-[Syne]">Главная</h1>
+          <p className="text-muted-foreground text-sm mt-1">Управляйте своей базой знаний</p>
         </div>
         <Button
           data-tour="create-workspace"

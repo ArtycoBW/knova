@@ -9,8 +9,70 @@ import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
+import * as fs from "fs";
+import * as path from "path";
 import { AppModule } from "./app.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
+import { PrismaService } from "./modules/prisma/prisma.service";
+
+async function syncEmbeddingColumn(
+  prisma: PrismaService,
+  targetDimensions: number,
+) {
+  const rows = await prisma.$queryRawUnsafe<{ atttypmod: number | null }[]>(
+    `
+      SELECT atttypmod
+      FROM pg_attribute
+      WHERE attrelid = '"DocumentChunk"'::regclass
+        AND attname = 'embedding'
+    `,
+  );
+
+  const currentDimensions = Number(rows[0]?.atttypmod ?? 0);
+
+  if (!currentDimensions || currentDimensions === targetDimensions) {
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.$executeRawUnsafe(
+      `ALTER TABLE "DocumentChunk" DROP COLUMN IF EXISTS "embedding_next"`,
+    );
+    await tx.$executeRawUnsafe(
+      `ALTER TABLE "DocumentChunk" ADD COLUMN "embedding_next" vector(${targetDimensions})`,
+    );
+
+    if (currentDimensions < targetDimensions) {
+      const padding = targetDimensions - currentDimensions;
+      await tx.$executeRawUnsafe(`
+        UPDATE "DocumentChunk"
+        SET "embedding_next" = (
+          '[' || trim(both '[]' from embedding::text) || repeat(',0', ${padding}) || ']'
+        )::vector(${targetDimensions})
+        WHERE embedding IS NOT NULL
+      `);
+    } else {
+      await tx.$executeRawUnsafe(`
+        UPDATE "DocumentChunk"
+        SET "embedding_next" = (
+          '[' || array_to_string(
+            (string_to_array(trim(both '[]' from embedding::text), ','))[1:${targetDimensions}],
+            ','
+          ) || ']'
+        )::vector(${targetDimensions})
+        WHERE embedding IS NOT NULL
+      `);
+    }
+
+    await tx.$executeRawUnsafe(
+      `ALTER TABLE "DocumentChunk" DROP COLUMN "embedding"`,
+    );
+    await tx.$executeRawUnsafe(
+      `ALTER TABLE "DocumentChunk" RENAME COLUMN "embedding_next" TO "embedding"`,
+    );
+  });
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
@@ -36,6 +98,18 @@ async function bootstrap() {
     },
   });
 
+  const uploadDir = path.resolve(process.env.UPLOAD_DIR || "./uploads");
+  const avatarDir = path.join(uploadDir, "avatars");
+  if (!fs.existsSync(avatarDir)) {
+    fs.mkdirSync(avatarDir, { recursive: true });
+  }
+
+  await app.register(fastifyStatic, {
+    root: avatarDir,
+    prefix: "/uploads/avatars/",
+    decorateReply: false,
+  });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -45,6 +119,13 @@ async function bootstrap() {
   );
 
   app.useGlobalFilters(new HttpExceptionFilter());
+
+  const prisma = app.get(PrismaService);
+  const embeddingDimensions = parseInt(
+    process.env.EMBEDDING_DIMENSIONS || "1024",
+    10,
+  );
+  await syncEmbeddingColumn(prisma, embeddingDimensions);
 
   const config = new DocumentBuilder()
     .setTitle("Knova API")

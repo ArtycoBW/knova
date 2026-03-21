@@ -124,7 +124,7 @@ model DocumentChunk {
   content    String
   chunkIndex Int
   pageNumber Int?
-  embedding  Unsupported("vector(768)")?
+  embedding  Unsupported("vector(1024)")?
   metadata   Json?
   createdAt  DateTime                    @default(now())
   document   Document                    @relation(fields: [documentId], references: [id], onDelete: Cascade)

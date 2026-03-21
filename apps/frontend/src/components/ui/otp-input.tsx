@@ -73,6 +73,7 @@ export function OtpInput({
             key={i}
             ref={(el) => { inputsRef.current[i] = el; }}
             type="text"
+            autoFocus={i === 0}
             inputMode="numeric"
             maxLength={1}
             value={digits[i] === " " ? "" : (digits[i] || "")}

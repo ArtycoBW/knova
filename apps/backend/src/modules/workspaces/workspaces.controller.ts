@@ -5,7 +5,11 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { WorkspacesService } from "./workspaces.service";
-import { CreateWorkspaceDto, UpdateWorkspaceDto } from "./dto/workspace.dto";
+import {
+  CompareDocumentsDto,
+  CreateWorkspaceDto,
+  UpdateWorkspaceDto,
+} from "./dto/workspace.dto";
 
 @ApiTags("Workspaces")
 @ApiBearerAuth()
@@ -46,6 +50,16 @@ export class WorkspacesController {
     @Body() dto: UpdateWorkspaceDto,
   ) {
     return this.workspacesService.update(id, req.user.id, dto);
+  }
+
+  @Post(":id/compare")
+  @ApiOperation({ summary: "Сравнить два документа внутри воркспейса" })
+  compare(
+    @Param("id") id: string,
+    @Req() req: { user: { id: string } },
+    @Body() dto: CompareDocumentsDto,
+  ) {
+    return this.workspacesService.compare(id, req.user.id, dto);
   }
 
   @Delete(":id")

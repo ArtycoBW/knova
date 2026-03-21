@@ -58,9 +58,9 @@ api.interceptors.response.use(
 
 function redirectToLogin() {
   if (typeof window !== "undefined") {
-    const path = window.location.pathname;
+    const path = `${window.location.pathname}${window.location.search}`;
     const isAuthPage = ["/login", "/register", "/reset-password"].some((p) =>
-      path.startsWith(p),
+      window.location.pathname.startsWith(p),
     );
     if (!isAuthPage) {
       window.location.href = `/login?redirect=${encodeURIComponent(path)}`;

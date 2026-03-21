@@ -1,16 +1,22 @@
 import {
-  Injectable,
   BadRequestException,
+  Injectable,
   NotFoundException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { NotificationType, UserRole } from "@prisma/client";
 import * as bcrypt from "bcrypt";
+import * as fs from "fs";
+import * as path from "path";
 import { PrismaService } from "../prisma/prisma.service";
-import { UpdateProfileDto, ChangePasswordDto } from "./dto/update-profile.dto";
-import { UserRole } from "@prisma/client";
+import { ChangePasswordDto, UpdateProfileDto } from "./dto/update-profile.dto";
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly config: ConfigService,
+  ) {}
 
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     const user = await this.prisma.user.update({
@@ -24,6 +30,28 @@ export class UsersService {
       },
     });
     return { user: this.sanitize(user) };
+  }
+
+  async uploadAvatar(userId: string, filename: string) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException("Пользователь не найден");
+    }
+
+    if (user.avatarUrl) {
+      const currentPath = this.resolveAvatarPath(user.avatarUrl);
+      if (currentPath && fs.existsSync(currentPath)) {
+        fs.unlinkSync(currentPath);
+      }
+    }
+
+    const avatarUrl = `${this.getPublicApiUrl()}/uploads/avatars/${filename}`;
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+    });
+
+    return { avatarUrl };
   }
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
@@ -43,11 +71,44 @@ export class UsersService {
   }
 
   async completeOnboarding(userId: string) {
+    const existingBadge = await this.prisma.badge.findFirst({
+      where: { userId, name: "Первопроходец" },
+    });
+
     const user = await this.prisma.user.update({
       where: { id: userId },
-      data: { onboardingDone: true, xp: { increment: 100 } },
+      data: {
+        onboardingDone: true,
+        xp: existingBadge ? undefined : { increment: 100 },
+      },
     });
-    return { xp: user.xp, message: "Онбординг завершён" };
+
+    let badge = existingBadge;
+    if (!badge) {
+      badge = await this.prisma.badge.create({
+        data: {
+          userId,
+          name: "Первопроходец",
+          description: "Завершил первое знакомство с платформой",
+          icon: "🚀",
+        },
+      });
+
+      await this.prisma.notification.create({
+        data: {
+          userId,
+          type: NotificationType.BADGE_EARNED,
+          title: "Новый бейдж",
+          message: "Вы получили бейдж «Первопроходец»",
+          metadata: {
+            badgeId: badge.id,
+            icon: badge.icon,
+          },
+        },
+      });
+    }
+
+    return { xp: user.xp, badge };
   }
 
   async getNotifications(userId: string) {
@@ -110,5 +171,25 @@ export class UsersService {
       level: user.level,
       onboardingDone: user.onboardingDone,
     };
+  }
+
+  private getPublicApiUrl() {
+    return (
+      this.config.get<string>("PUBLIC_API_URL") ??
+      `http://localhost:${this.config.get<string>("PORT", "3001")}`
+    );
+  }
+
+  private resolveAvatarPath(avatarUrl: string) {
+    try {
+      const url = new URL(avatarUrl);
+      const relativePath = url.pathname.replace(/^\/uploads\//, "");
+      return path.resolve(
+        this.config.get<string>("UPLOAD_DIR", "./uploads"),
+        relativePath,
+      );
+    } catch {
+      return null;
+    }
   }
 }
