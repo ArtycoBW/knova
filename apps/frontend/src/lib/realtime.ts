@@ -6,6 +6,15 @@ let socket: Socket | null = null;
 let currentToken: string | null = null;
 
 function getBaseUrl() {
+  const explicitWsUrl = (process.env.NEXT_PUBLIC_WS_URL || "").replace(/\/$/, "");
+  if (explicitWsUrl) {
+    return explicitWsUrl;
+  }
+
+  if (typeof window !== "undefined") {
+    return window.location.origin.replace(/\/$/, "");
+  }
+
   return (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 }
 
