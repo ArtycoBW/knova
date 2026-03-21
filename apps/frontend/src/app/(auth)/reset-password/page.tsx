@@ -7,8 +7,14 @@ import { ArrowRight, ArrowLeft } from "lucide-react";
 import { Typewriter } from "@/components/ui/typewriter-text";
 import { OtpInput } from "@/components/ui/otp-input";
 import { PasswordStrength, isPasswordStrong } from "@/components/ui/password-strength";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { useResetPassword, useResetPasswordConfirm } from "@/hooks/use-auth";
 import { useToast } from "@/providers/toast-provider";
+
+const authInput = "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 rounded-xl h-12";
+const authBtn = "w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-40 h-12";
 
 export default function ResetPasswordPage() {
   const toast = useToast();
@@ -71,14 +77,23 @@ export default function ResetPasswordPage() {
             </motion.div>
           ) : step === 0 ? (
             <motion.div key="step0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-              <div>
-                <label className="block text-xs text-white/50 mb-1.5">Email</label>
-                <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleStep1()} placeholder="you@example.com" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+              <div className="space-y-1.5">
+                <Label className="text-xs text-white/50">Email</Label>
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleStep1()}
+                  placeholder="you@example.com"
+                  className={authInput}
+                />
               </div>
-              <button onClick={handleStep1} disabled={resetPassword.isPending || !email} className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-all hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed">
+              <Button onClick={handleStep1} disabled={resetPassword.isPending || !email} className={authBtn}>
                 {resetPassword.isPending ? "Отправка..." : "Получить код"} {!resetPassword.isPending && <ArrowRight size={16} />}
-              </button>
-              <p className="text-center text-xs text-white/30"><Link href="/login" className="text-emerald-400 hover:text-emerald-300">← Назад к входу</Link></p>
+              </Button>
+              <p className="text-center text-xs text-white/30">
+                <Link href="/login" className="text-emerald-400 hover:text-emerald-300">← Назад к входу</Link>
+              </p>
             </motion.div>
           ) : (
             <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-5">
@@ -86,17 +101,23 @@ export default function ResetPasswordPage() {
                 <p className="text-sm text-white/50">Код отправлен на <span className="text-emerald-400">{email}</span></p>
               </div>
               <OtpInput value={code} onChange={setCode} error={otpError} />
-              <div>
-                <label className="block text-xs text-white/50 mb-1.5">Новый пароль</label>
-                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Минимум 5 символов" className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all" />
+              <div className="space-y-1.5">
+                <Label className="text-xs text-white/50">Новый пароль</Label>
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Минимум 5 символов"
+                  className={authInput}
+                />
                 {newPassword && <div className="mt-3"><PasswordStrength password={newPassword} /></div>}
               </div>
-              <button onClick={handleStep2} disabled={resetConfirm.isPending || code.length < 5 || !isPasswordStrong(newPassword)} className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-all hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed">
+              <Button onClick={handleStep2} disabled={resetConfirm.isPending || code.length < 5 || !isPasswordStrong(newPassword)} className={authBtn}>
                 {resetConfirm.isPending ? "Сохранение..." : "Изменить пароль"} {!resetConfirm.isPending && <ArrowRight size={16} />}
-              </button>
-              <button onClick={() => setStep(0)} className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 transition-colors mx-auto">
+              </Button>
+              <Button variant="ghost" onClick={() => setStep(0)} className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 hover:bg-transparent mx-auto">
                 <ArrowLeft size={12} /> Назад
-              </button>
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>

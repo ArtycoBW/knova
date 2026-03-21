@@ -6,7 +6,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Eye, EyeOff, ArrowRight, ArrowLeft } from "lucide-react";
 import { Typewriter } from "@/components/ui/typewriter-text";
 import { OtpInput } from "@/components/ui/otp-input";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { useLogin, useLoginVerify } from "@/hooks/use-auth";
+
+const authInput = "bg-white/5 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-emerald-500/20 focus-visible:border-emerald-500/50 rounded-xl h-12";
+const authBtn = "w-full rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white hover:bg-emerald-500 disabled:opacity-40 h-12";
 
 export default function LoginPage() {
   const [step, setStep] = useState(0);
@@ -71,44 +77,50 @@ export default function LoginPage() {
         <AnimatePresence mode="wait">
           {step === 0 && (
             <motion.div key="step0" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-4">
-              <div>
-                <label className="block text-xs text-white/50 mb-1.5">Email</label>
-                <input
+              <div className="space-y-1.5">
+                <Label className="text-xs text-white/50">Email</Label>
+                <Input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleStep1()}
                   placeholder="you@example.com"
-                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/20 outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                  className={authInput}
                 />
               </div>
-              <div>
-                <label className="block text-xs text-white/50 mb-1.5">Пароль</label>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-white/50">Пароль</Label>
                 <div className="relative">
-                  <input
+                  <Input
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleStep1()}
                     placeholder="Ваш пароль"
-                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-11 text-sm text-white placeholder-white/20 outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+                    className={`${authInput} pr-11`}
                   />
-                  <button type="button" onClick={() => setShowPassword((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60 transition-colors">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-white/30 hover:text-white/60 hover:bg-transparent"
+                  >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </button>
+                  </Button>
                 </div>
               </div>
               <div className="flex justify-end">
                 <Link href="/reset-password" className="text-xs text-white/30 hover:text-emerald-400 transition-colors">Забыли пароль?</Link>
               </div>
-              <button
+              <Button
                 onClick={handleStep1}
                 disabled={login.isPending || !email || !password}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-all hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                className={authBtn}
               >
                 {login.isPending ? "Проверка..." : "Войти"}
                 {!login.isPending && <ArrowRight size={16} />}
-              </button>
+              </Button>
               <p className="text-center text-xs text-white/30">
                 Нет аккаунта?{" "}
                 <Link href="/register" className="text-emerald-400 hover:text-emerald-300">Зарегистрироваться</Link>
@@ -123,17 +135,21 @@ export default function LoginPage() {
                 <p className="text-sm font-medium text-emerald-400">{email}</p>
               </div>
               <OtpInput value={code} onChange={setCode} error={otpError} />
-              <button
+              <Button
                 onClick={handleStep2}
                 disabled={loginVerify.isPending || code.length < 5}
-                className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 text-sm font-semibold text-white transition-all hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed"
+                className={authBtn}
               >
                 {loginVerify.isPending ? "Вход..." : "Подтвердить"}
                 {!loginVerify.isPending && <ArrowRight size={16} />}
-              </button>
-              <button onClick={() => setStep(0)} className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 transition-colors mx-auto">
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setStep(0)}
+                className="flex items-center gap-1 text-xs text-white/30 hover:text-white/60 hover:bg-transparent mx-auto"
+              >
                 <ArrowLeft size={12} /> Назад
-              </button>
+              </Button>
             </motion.div>
           )}
         </AnimatePresence>

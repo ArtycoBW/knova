@@ -1,3 +1,5 @@
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+
 import { NestFactory } from "@nestjs/core";
 import {
   FastifyAdapter,
@@ -6,6 +8,7 @@ import {
 import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "@fastify/helmet";
+import multipart from "@fastify/multipart";
 import { AppModule } from "./app.module";
 import { HttpExceptionFilter } from "./common/filters/http-exception.filter";
 
@@ -25,6 +28,12 @@ async function bootstrap() {
   await app.register(helmet, {
     contentSecurityPolicy: false,
     crossOriginResourcePolicy: false,
+  });
+
+  await app.register(multipart, {
+    limits: {
+      fileSize: parseInt(process.env.MAX_FILE_SIZE || "104857600", 10),
+    },
   });
 
   app.useGlobalPipes(

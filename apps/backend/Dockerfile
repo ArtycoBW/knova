@@ -4,7 +4,7 @@ WORKDIR /app
 RUN apk add --no-cache openssl
 
 COPY package*.json .npmrc ./
-RUN npm ci --legacy-peer-deps
+RUN npm install --legacy-peer-deps
 
 COPY . .
 RUN npx prisma generate

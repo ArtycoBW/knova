@@ -32,6 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== "undefined") {
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
+      document.cookie = `accessToken=${accessToken}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
     }
     set({ user, accessToken, isAuthenticated: true });
   },
@@ -42,6 +43,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== "undefined") {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
+      document.cookie = "accessToken=; path=/; max-age=0; SameSite=Lax";
     }
     set({ user: null, accessToken: null, isAuthenticated: false });
   },
@@ -50,6 +52,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("accessToken");
       if (token) {
+        document.cookie = `accessToken=${token}; path=/; max-age=${30 * 24 * 60 * 60}; SameSite=Lax`;
         set({ accessToken: token, isAuthenticated: true });
       }
     }

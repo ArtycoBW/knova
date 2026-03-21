@@ -26,6 +26,7 @@ export class EmbeddingService {
       case "centrinvest":
         return new OpenAIEmbeddings({
           openAIApiKey: this.config.get("CENTRINVEST_API_KEY"),
+          model: this.config.get("CENTRINVEST_EMBED_MODEL", ""),
           configuration: {
             baseURL: this.config.get("CENTRINVEST_EMBEDDING_URL"),
           },
