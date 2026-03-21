@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { disconnectRealtimeSocket } from "@/lib/realtime";
 
 interface User {
   id: string;
@@ -29,6 +30,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
 
   setAuth: (user, accessToken, refreshToken) => {
+    disconnectRealtimeSocket();
     if (typeof window !== "undefined") {
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
@@ -40,6 +42,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   setUser: (user) => set({ user }),
 
   logout: () => {
+    disconnectRealtimeSocket();
     if (typeof window !== "undefined") {
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");

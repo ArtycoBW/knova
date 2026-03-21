@@ -1,14 +1,20 @@
 "use client";
 
 import { Suspense, useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 import {
   useParams,
   usePathname,
   useRouter,
   useSearchParams,
 } from "next/navigation";
+import Link from "next/link";
 import { motion } from "framer-motion";
+import { formatDistanceToNow } from "date-fns";
+import { ru } from "date-fns/locale";
 import {
+  AlertCircle,
   ArrowLeft,
   BarChart2,
   CheckCircle2,
@@ -28,18 +34,8 @@ import {
   Table2,
   Trash2,
   Video,
-  AlertCircle,
 } from "lucide-react";
-import {
-  useCompareDocuments,
-  useDeleteDocument,
-  useDeleteWorkspace,
-  useDocuments,
-  useUpdateWorkspace,
-  useUploadDocument,
-  useWorkspace,
-} from "@/hooks/use-workspaces";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,39 +45,112 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { PdfViewer } from "@/components/ui/pdf-viewer";
-import Link from "next/link";
-import { formatDistanceToNow } from "date-fns";
-import { ru } from "date-fns/locale";
+import { getRealtimeSocket } from "@/lib/realtime";
 import type { Document } from "@/hooks/use-workspaces";
+import {
+  useCompareDocuments,
+  useDeleteDocument,
+  useDeleteWorkspace,
+  useDocuments,
+  useUpdateWorkspace,
+  useUploadDocument,
+  useWorkspace,
+} from "@/hooks/use-workspaces";
+import { useAuthStore } from "@/store/auth.store";
+
+const PdfViewer = dynamic(
+  () => import("@/components/ui/pdf-viewer").then((mod) => mod.PdfViewer),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-72 items-center justify-center rounded-xl border border-border bg-muted/20 text-sm text-muted-foreground">
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+        Загружаем PDF...
+      </div>
+    ),
+  },
+);
 
 const STATUS_ICON: Record<Document["status"], React.ReactNode> = {
-  PENDING: <Clock className="h-4 w-4 animate-pulse text-muted-foreground" />,
-  PROCESSING: <Loader2 className="h-4 w-4 animate-spin text-amber-400" />,
-  READY: <CheckCircle2 className="h-4 w-4 text-primary" />,
-  ERROR: <AlertCircle className="h-4 w-4 text-destructive" />,
+  PENDING: <Clock className="h-4 w-4 animate-pulse text-current" />,
+  PROCESSING: <Loader2 className="h-4 w-4 animate-spin text-current" />,
+  READY: <CheckCircle2 className="h-4 w-4 text-current" />,
+  ERROR: <AlertCircle className="h-4 w-4 text-current" />,
 };
 
 const STATUS_LABEL: Record<Document["status"], string> = {
   PENDING: "В очереди",
-  PROCESSING: "Обработка",
+  PROCESSING: "Обрабатывается",
   READY: "Готов",
   ERROR: "Ошибка",
 };
 
+function getStatusBadgeClass(status: Document["status"]) {
+  switch (status) {
+    case "READY":
+      return "border-transparent bg-emerald-400 text-emerald-950";
+    case "PROCESSING":
+      return "border-transparent bg-amber-300 text-amber-950";
+    case "ERROR":
+      return "border-transparent bg-rose-400 text-rose-950";
+    default:
+      return "border-transparent bg-zinc-300 text-zinc-900";
+  }
+}
+
 const GENERATORS = [
-  { href: "chat", icon: MessageSquare, label: "Чат", color: "hover:border-primary/40 hover:bg-primary/10" },
-  { href: "mindmap", icon: GitFork, label: "Карта знаний", color: "hover:border-violet-500/40 hover:bg-violet-500/10" },
-  { href: "podcast", icon: Podcast, label: "Подкаст", color: "hover:border-pink-500/40 hover:bg-pink-500/10" },
-  { href: "quiz", icon: CheckSquare, label: "Тест", color: "hover:border-amber-500/40 hover:bg-amber-500/10" },
-  { href: "reports", icon: FileOutput, label: "Отчёт", color: "hover:border-blue-500/40 hover:bg-blue-500/10" },
-  { href: "infographic", icon: BarChart2, label: "Инфографика", color: "hover:border-cyan-500/40 hover:bg-cyan-500/10" },
-  { href: "table", icon: Table2, label: "Таблица", color: "hover:border-green-500/40 hover:bg-green-500/10" },
-  { href: "presentation", icon: Presentation, label: "Презентация", color: "hover:border-orange-500/40 hover:bg-orange-500/10" },
+  {
+    href: "chat",
+    icon: MessageSquare,
+    label: "Чат",
+    color: "hover:border-primary/40 hover:bg-primary/10",
+  },
+  {
+    href: "mindmap",
+    icon: GitFork,
+    label: "Карта знаний",
+    color: "hover:border-violet-500/40 hover:bg-violet-500/10",
+  },
+  {
+    href: "podcast",
+    icon: Podcast,
+    label: "Подкаст",
+    color: "hover:border-pink-500/40 hover:bg-pink-500/10",
+  },
+  {
+    href: "quiz",
+    icon: CheckSquare,
+    label: "Тест",
+    color: "hover:border-amber-500/40 hover:bg-amber-500/10",
+  },
+  {
+    href: "reports",
+    icon: FileOutput,
+    label: "Отчёт",
+    color: "hover:border-blue-500/40 hover:bg-blue-500/10",
+  },
+  {
+    href: "infographic",
+    icon: BarChart2,
+    label: "Инфографика",
+    color: "hover:border-cyan-500/40 hover:bg-cyan-500/10",
+  },
+  {
+    href: "table",
+    icon: Table2,
+    label: "Таблица",
+    color: "hover:border-green-500/40 hover:bg-green-500/10",
+  },
+  {
+    href: "presentation",
+    icon: Presentation,
+    label: "Презентация",
+    color: "hover:border-orange-500/40 hover:bg-orange-500/10",
+  },
 ];
 
 function formatSize(bytes: number) {
@@ -139,7 +208,8 @@ function EditWorkspaceDialog({
         <DialogHeader>
           <DialogTitle>Редактировать воркспейс</DialogTitle>
           <DialogDescription>
-            Обновите название и описание, чтобы быстрее ориентироваться в материалах.
+            Обновите название и описание, чтобы быстрее ориентироваться в
+            материалах.
           </DialogDescription>
         </DialogHeader>
 
@@ -226,7 +296,8 @@ function CompareDialog({
         <DialogHeader>
           <DialogTitle>Сравнить документы</DialogTitle>
           <DialogDescription>
-            Выберите два готовых источника и получите краткое сравнение по темам.
+            Выберите два готовых источника и получите краткое сравнение по
+            темам.
           </DialogDescription>
         </DialogHeader>
 
@@ -246,9 +317,13 @@ function CompareDialog({
                 <div className="flex items-start gap-3">
                   {getDocIcon(document)}
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{document.originalName}</p>
+                    <p className="truncate text-sm font-medium">
+                      {document.originalName}
+                    </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {document.pageCount ? `${document.pageCount} стр.` : formatDuration(document.duration) || "Готов к сравнению"}
+                      {document.pageCount
+                        ? `${document.pageCount} стр.`
+                        : formatDuration(document.duration) || "Готов к сравнению"}
                     </p>
                   </div>
                 </div>
@@ -273,8 +348,12 @@ function CompareDialog({
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Совпадение тем</p>
-                    <p className="text-3xl font-bold text-primary">{comparison.similarity}%</p>
+                    <p className="text-sm text-muted-foreground">
+                      Совпадение тем
+                    </p>
+                    <p className="text-3xl font-bold text-primary">
+                      {comparison.similarity}%
+                    </p>
                   </div>
                   <Button
                     variant="outline"
@@ -295,15 +374,22 @@ function CompareDialog({
                         </Badge>
                       ))
                     ) : (
-                      <p className="text-sm text-muted-foreground">Сильных пересечений не найдено.</p>
+                      <p className="text-sm text-muted-foreground">
+                        Сильных пересечений не найдено.
+                      </p>
                     )}
                   </div>
                 </div>
 
                 {comparison.documents.map((document) => (
-                  <div key={document.id} className="rounded-xl border border-border bg-card p-4">
+                  <div
+                    key={document.id}
+                    className="rounded-xl border border-border bg-card p-4"
+                  >
                     <p className="text-sm font-semibold">{document.name}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{document.excerpt}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {document.excerpt}
+                    </p>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {(comparison.uniqueTopics[document.id] || []).map((topic) => (
                         <Badge key={topic} variant="outline">
@@ -338,7 +424,9 @@ function DocumentPreviewDialog({
           <DialogTitle>{document?.originalName ?? "Предпросмотр"}</DialogTitle>
           <DialogDescription>
             {document
-              ? `${formatSize(document.size)}${document.pageCount ? ` • ${document.pageCount} стр.` : ""}${document.duration ? ` • ${formatDuration(document.duration)}` : ""}`
+              ? `${formatSize(document.size)}${
+                  document.pageCount ? ` / ${document.pageCount} стр.` : ""
+                }${document.duration ? ` / ${formatDuration(document.duration)}` : ""}`
               : "Документ недоступен"}
           </DialogDescription>
         </DialogHeader>
@@ -363,6 +451,8 @@ function DocumentPreviewDialog({
 function WorkspacePageContent() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
+  const queryClient = useQueryClient();
+  const accessToken = useAuthStore((s) => s.accessToken);
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -379,6 +469,9 @@ function WorkspacePageContent() {
   const [showEditWs, setShowEditWs] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [progressByDocument, setProgressByDocument] = useState<
+    Record<string, { percent: number; step: string }>
+  >({});
 
   const readyDocuments = documents?.filter((document) => document.status === "READY") ?? [];
   const hasReadyDocs = readyDocuments.length > 0;
@@ -404,7 +497,9 @@ function WorkspacePageContent() {
     }
   };
 
-  const handlePickFiles = (accept = ".pdf,.docx,.txt,.md,.mp3,.wav,.ogg,.m4a,.mp4") => {
+  const handlePickFiles = (
+    accept = ".pdf,.docx,.txt,.md,.mp3,.wav,.ogg,.m4a,.webm,.mp4,.mov",
+  ) => {
     if (!fileRef.current) return;
     fileRef.current.accept = accept;
     fileRef.current.click();
@@ -423,6 +518,90 @@ function WorkspacePageContent() {
       );
     }
   }, [documents, searchParams]);
+
+  useEffect(() => {
+    const socket = getRealtimeSocket();
+    if (!socket || !id || !accessToken) {
+      return;
+    }
+
+    const joinWorkspace = () => {
+      socket.emit("workspace:join", { workspaceId: id });
+    };
+
+    const clearProgress = (documentId: string) => {
+      setProgressByDocument((current) => {
+        if (!current[documentId]) {
+          return current;
+        }
+
+        const next = { ...current };
+        delete next[documentId];
+        return next;
+      });
+    };
+
+    const handleProgress = (event: {
+      workspaceId: string;
+      documentId: string;
+      percent: number;
+      step: string;
+    }) => {
+      if (event.workspaceId !== id) {
+        return;
+      }
+
+      setProgressByDocument((current) => ({
+        ...current,
+        [event.documentId]: {
+          percent: event.percent,
+          step: event.step,
+        },
+      }));
+    };
+
+    const handleReady = (event: { workspaceId: string; documentId: string }) => {
+      if (event.workspaceId !== id) {
+        return;
+      }
+
+      clearProgress(event.documentId);
+      queryClient.invalidateQueries({ queryKey: ["documents", id] });
+      queryClient.invalidateQueries({ queryKey: ["workspace", id] });
+      queryClient.invalidateQueries({ queryKey: ["workspaces"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    };
+
+    const handleError = (event: { workspaceId: string; documentId: string }) => {
+      if (event.workspaceId !== id) {
+        return;
+      }
+
+      clearProgress(event.documentId);
+      queryClient.invalidateQueries({ queryKey: ["documents", id] });
+      queryClient.invalidateQueries({ queryKey: ["workspace", id] });
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    };
+
+    if (socket.connected) {
+      joinWorkspace();
+    } else {
+      socket.on("connect", joinWorkspace);
+      socket.connect();
+    }
+
+    socket.on("doc:progress", handleProgress);
+    socket.on("doc:ready", handleReady);
+    socket.on("doc:error", handleError);
+
+    return () => {
+      socket.emit("workspace:leave", { workspaceId: id });
+      socket.off("connect", joinWorkspace);
+      socket.off("doc:progress", handleProgress);
+      socket.off("doc:ready", handleReady);
+      socket.off("doc:error", handleError);
+    };
+  }, [accessToken, id, queryClient]);
 
   if (wsLoading) {
     return (
@@ -483,7 +662,7 @@ function WorkspacePageContent() {
           ref={fileRef}
           type="file"
           multiple
-          accept=".pdf,.docx,.txt,.md,.mp3,.wav,.ogg,.m4a,.mp4"
+          accept=".pdf,.docx,.txt,.md,.mp3,.wav,.ogg,.m4a,.webm,.mp4,.mov"
           className="hidden"
           onChange={(event) => handleFiles(event.target.files)}
         />
@@ -499,7 +678,7 @@ function WorkspacePageContent() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handlePickFiles(".mp3,.wav,.ogg,.m4a")}
+            onClick={() => handlePickFiles(".mp3,.wav,.ogg,.m4a,.webm")}
             className="hover:border-violet-500/50"
           >
             <Mic className="mr-1.5 h-3.5 w-3.5 text-violet-400" /> Аудио
@@ -507,21 +686,25 @@ function WorkspacePageContent() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handlePickFiles(".mp4")}
+            onClick={() => handlePickFiles(".mp4,.webm,.mov")}
             className="hover:border-blue-500/50"
           >
             <Video className="mr-1.5 h-3.5 w-3.5 text-blue-400" /> Видео
           </Button>
         </div>
         {upload.isPending && (
-          <p className="mt-3 animate-pulse text-xs text-primary">Загружаем источник...</p>
+          <p className="mt-3 animate-pulse text-xs text-primary">
+            Загружаем источник...
+          </p>
         )}
       </div>
 
       {(docsLoading || documents?.length) ? (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-muted-foreground">Источники</h2>
+            <h2 className="text-sm font-semibold text-muted-foreground">
+              Источники
+            </h2>
             {documents?.length ? (
               <p className="text-xs text-muted-foreground">
                 {readyDocuments.length} из {documents.length} готовы
@@ -536,6 +719,7 @@ function WorkspacePageContent() {
           ) : (
             documents?.map((document) => {
               const excerpt = getDocumentExcerpt(document);
+              const progress = progressByDocument[document.id];
 
               return (
                 <motion.div
@@ -569,12 +753,18 @@ function WorkspacePageContent() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{document.originalName}</p>
+                          <p className="truncate text-sm font-medium">
+                            {document.originalName}
+                          </p>
                           <p className="text-xs text-muted-foreground">
                             {formatSize(document.size)}
-                            {document.duration ? ` • ${formatDuration(document.duration)}` : ""}
-                            {document.pageCount ? ` • ${document.pageCount} стр.` : ""}
-                            {" • "}
+                            {document.duration
+                              ? ` / ${formatDuration(document.duration)}`
+                              : ""}
+                            {document.pageCount
+                              ? ` / ${document.pageCount} стр.`
+                              : ""}
+                            {" / "}
                             {formatDistanceToNow(new Date(document.createdAt), {
                               locale: ru,
                               addSuffix: true,
@@ -583,14 +773,7 @@ function WorkspacePageContent() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge
-                            variant={
-                              document.status === "READY"
-                                ? "default"
-                                : document.status === "ERROR"
-                                  ? "destructive"
-                                  : "secondary"
-                            }
-                            className="gap-1 text-xs"
+                            className={`gap-1 text-xs ${getStatusBadgeClass(document.status)}`}
                           >
                             {STATUS_ICON[document.status]}
                             <span>{STATUS_LABEL[document.status]}</span>
@@ -614,6 +797,12 @@ function WorkspacePageContent() {
                           {excerpt}
                         </p>
                       )}
+
+                      {progress && document.status !== "READY" && (
+                        <p className="mt-2 text-xs text-amber-300">
+                          {progress.step} / {progress.percent}%
+                        </p>
+                      )}
                     </div>
                   </div>
                 </motion.div>
@@ -625,7 +814,9 @@ function WorkspacePageContent() {
 
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-muted-foreground">Создать</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground">
+            Создать
+          </h2>
           {!hasReadyDocs && (
             <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <RefreshCw className="h-3.5 w-3.5" />
@@ -635,19 +826,38 @@ function WorkspacePageContent() {
         </div>
 
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {GENERATORS.map((generator) => (
-            <Link
-              key={generator.href}
-              href={hasReadyDocs ? `/${generator.href}/${id}` : "#"}
-              className={`flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-border p-4 text-center transition-all ${
-                hasReadyDocs ? `cursor-pointer ${generator.color}` : "cursor-not-allowed opacity-50"
-              }`}
-              onClick={(event) => !hasReadyDocs && event.preventDefault()}
-            >
-              <generator.icon className="h-5 w-5" />
-              <span className="text-xs font-medium">{generator.label}</span>
-            </Link>
-          ))}
+          {GENERATORS.map((generator) => {
+            const href = `/${generator.href}/${id}`;
+            const className = `flex min-h-28 flex-col items-center justify-center gap-2 rounded-xl border border-border p-4 text-center transition-all ${
+              hasReadyDocs ? `cursor-pointer ${generator.color}` : "cursor-not-allowed opacity-50"
+            }`;
+
+            if (generator.href === "chat") {
+              return (
+                <a
+                  key={generator.href}
+                  href={hasReadyDocs ? href : "#"}
+                  className={className}
+                  onClick={(event) => !hasReadyDocs && event.preventDefault()}
+                >
+                  <generator.icon className="h-5 w-5" />
+                  <span className="text-xs font-medium">{generator.label}</span>
+                </a>
+              );
+            }
+
+            return (
+              <Link
+                key={generator.href}
+                href={hasReadyDocs ? href : "#"}
+                className={className}
+                onClick={(event) => !hasReadyDocs && event.preventDefault()}
+              >
+                <generator.icon className="h-5 w-5" />
+                <span className="text-xs font-medium">{generator.label}</span>
+              </Link>
+            );
+          })}
 
           <button
             type="button"
@@ -670,7 +880,8 @@ function WorkspacePageContent() {
           <DialogHeader>
             <DialogTitle>Удалить документ?</DialogTitle>
             <DialogDescription>
-              Документ и все связанные данные будут удалены без возможности восстановления.
+              Документ и все связанные данные будут удалены без возможности
+              восстановления.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -701,7 +912,8 @@ function WorkspacePageContent() {
           <DialogHeader>
             <DialogTitle>Удалить воркспейс?</DialogTitle>
             <DialogDescription>
-              Воркспейс «{workspace.name}» и все его документы будут удалены без возможности восстановления.
+              Воркспейс «{workspace.name}» и все его документы будут удалены без
+              возможности восстановления.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>

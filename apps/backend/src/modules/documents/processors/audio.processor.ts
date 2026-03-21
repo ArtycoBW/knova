@@ -3,8 +3,9 @@ import { Processor, WorkerHost } from "@nestjs/bullmq";
 import { NotificationType } from "@prisma/client";
 import { Job } from "bullmq";
 import * as fs from "fs";
-import ffmpeg from "fluent-ffmpeg";
+import * as ffmpeg from "fluent-ffmpeg";
 import * as path from "path";
+import { ChatGateway } from "../../chat/chat.gateway";
 import { EmbeddingService } from "../../llm/embedding.service";
 import { SttService } from "../../llm/stt.service";
 import { PrismaService } from "../../prisma/prisma.service";
@@ -17,6 +18,7 @@ export class AudioProcessor extends WorkerHost {
     private readonly prisma: PrismaService,
     private readonly embeddingService: EmbeddingService,
     private readonly sttService: SttService,
+    private readonly chatGateway: ChatGateway,
   ) {
     super();
   }
@@ -24,6 +26,8 @@ export class AudioProcessor extends WorkerHost {
   async process(job: Job<{ documentId: string }>) {
     const { documentId } = job.data;
     this.logger.log(`Транскрипция аудио/видео ${documentId}`);
+
+    let tempAudio: string | null = null;
 
     await this.prisma.document.update({
       where: { id: documentId },
@@ -44,23 +48,40 @@ export class AudioProcessor extends WorkerHost {
       });
 
       await job.updateProgress(10);
+      this.chatGateway.emitDocumentProgress(doc.workspace.userId, doc.workspace.id, {
+        documentId,
+        percent: 10,
+        step: "Подготавливаем медиа",
+        status: "PROCESSING",
+      });
 
       let audioPath = doc.path;
       let transcriptionMimeType = doc.mimeType;
-      let tempAudio: string | null = null;
 
-      if (doc.mimeType === "video/mp4") {
+      if (doc.mimeType.startsWith("video/")) {
         tempAudio = await this.extractAudio(doc.path);
         audioPath = tempAudio;
         transcriptionMimeType = "audio/mpeg";
       }
 
       await job.updateProgress(30);
+      this.chatGateway.emitDocumentProgress(doc.workspace.userId, doc.workspace.id, {
+        documentId,
+        percent: 30,
+        step: "Расшифровываем аудио",
+        status: "PROCESSING",
+      });
 
       const buffer = fs.readFileSync(audioPath);
       const text = await this.sttService.transcribe(buffer, transcriptionMimeType);
 
       await job.updateProgress(60);
+      this.chatGateway.emitDocumentProgress(doc.workspace.userId, doc.workspace.id, {
+        documentId,
+        percent: 60,
+        step: "Создаём векторные фрагменты",
+        status: "PROCESSING",
+      });
 
       if (tempAudio && fs.existsSync(tempAudio)) {
         fs.unlinkSync(tempAudio);
@@ -70,6 +91,7 @@ export class AudioProcessor extends WorkerHost {
       await this.prisma.documentChunk.deleteMany({
         where: { documentId },
       });
+
       for (let i = 0; i < chunks.length; i++) {
         const embedding = await this.embeddingService.embed(chunks[i]);
         await this.prisma.$executeRaw`
@@ -83,7 +105,15 @@ export class AudioProcessor extends WorkerHost {
             NOW()
           )
         `;
-        await job.updateProgress(60 + Math.round(((i + 1) / chunks.length) * 35));
+
+        const percent = 60 + Math.round(((i + 1) / chunks.length) * 35);
+        await job.updateProgress(percent);
+        this.chatGateway.emitDocumentProgress(doc.workspace.userId, doc.workspace.id, {
+          documentId,
+          percent,
+          step: "Создаём векторные фрагменты",
+          status: "PROCESSING",
+        });
       }
 
       await this.prisma.document.update({
@@ -91,7 +121,7 @@ export class AudioProcessor extends WorkerHost {
         data: { status: "READY", extractedText: text.slice(0, 5000) },
       });
 
-      await this.prisma.notification.create({
+      const notification = await this.prisma.notification.create({
         data: {
           userId: doc.workspace.userId,
           type: NotificationType.DOCUMENT_READY,
@@ -103,6 +133,17 @@ export class AudioProcessor extends WorkerHost {
           },
         },
       });
+
+      this.chatGateway.emitDocumentProgress(doc.workspace.userId, doc.workspace.id, {
+        documentId,
+        percent: 100,
+        step: "Источник готов",
+        status: "READY",
+      });
+      this.chatGateway.emitDocumentReady(doc.workspace.userId, doc.workspace.id, {
+        documentId,
+      });
+      this.chatGateway.emitNotification(doc.workspace.userId, notification);
 
       this.logger.log(`Аудио ${documentId} транскрибировано, чанков: ${chunks.length}`);
     } catch (error) {
@@ -125,7 +166,7 @@ export class AudioProcessor extends WorkerHost {
       });
 
       if (doc?.workspace?.userId) {
-        await this.prisma.notification.create({
+        const notification = await this.prisma.notification.create({
           data: {
             userId: doc.workspace.userId,
             type: NotificationType.SYSTEM,
@@ -137,6 +178,16 @@ export class AudioProcessor extends WorkerHost {
             },
           },
         });
+
+        this.chatGateway.emitDocumentError(doc.workspace.userId, doc.workspace.id, {
+          documentId,
+          error: "Не удалось расшифровать источник",
+        });
+        this.chatGateway.emitNotification(doc.workspace.userId, notification);
+      }
+
+      if (tempAudio && fs.existsSync(tempAudio)) {
+        fs.unlinkSync(tempAudio);
       }
 
       throw error;

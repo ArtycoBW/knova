@@ -24,7 +24,7 @@ export function useNotifications() {
     queryKey: ["notifications"],
     queryFn: () => api.get("/users/notifications").then((response) => response.data),
     staleTime: 15_000,
-    refetchInterval: 10_000,
+    refetchInterval: 30_000,
   });
 }
 
@@ -33,12 +33,17 @@ export function useMarkNotificationRead() {
   const toast = useToast();
 
   return useMutation({
-    mutationFn: (id: string) => api.post(`/users/notifications/${id}/read`).then((response) => response.data),
+    mutationFn: (id: string) =>
+      api.post(`/users/notifications/${id}/read`).then((response) => response.data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     },
     onError: (error) => {
-      toast.show({ variant: "error", title: "Ошибка", message: getErrorMessage(error) });
+      toast.show({
+        variant: "error",
+        title: "Ошибка",
+        message: getErrorMessage(error),
+      });
     },
   });
 }

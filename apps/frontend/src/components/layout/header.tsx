@@ -64,11 +64,13 @@ export function Header({ onMobileMenuToggle, title }: HeaderProps) {
           <Button
             variant="outline"
             onClick={() => setCommandOpen(true)}
-            className="hidden gap-2 border-border/70 bg-background/60 text-xs text-muted-foreground sm:flex"
+            className="hidden w-72 justify-start gap-2 border-border/70 bg-background/60 text-xs text-muted-foreground sm:flex"
           >
             <Search className="h-3.5 w-3.5" />
             Поиск
-            <span className="rounded border border-border/70 px-1.5 py-0.5 text-[10px]">Ctrl K</span>
+            <span className="ml-auto rounded border border-border/70 px-1.5 py-0.5 text-[10px]">
+              Ctrl K
+            </span>
           </Button>
 
           <Badge

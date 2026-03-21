@@ -5,6 +5,7 @@ import {
   FastifyAdapter,
   NestFastifyApplication,
 } from "@nestjs/platform-fastify";
+import { IoAdapter } from "@nestjs/platform-socket.io";
 import { ValidationPipe } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import helmet from "@fastify/helmet";
@@ -79,6 +80,7 @@ async function bootstrap() {
     AppModule,
     new FastifyAdapter(),
   );
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   app.enableCors({
     origin: true,

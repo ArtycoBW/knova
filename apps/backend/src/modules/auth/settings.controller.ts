@@ -1,11 +1,14 @@
-import { Controller, Get, Put, Body, UseGuards } from "@nestjs/common";
-import { ApiTags, ApiOperation, ApiBearerAuth } from "@nestjs/swagger";
-import { LlmService, LlmProvider } from "../llm/llm.service";
+import { Body, Controller, Get, Put, UseGuards } from "@nestjs/common";
+import { ApiBearerAuth, ApiOperation, ApiProperty, ApiTags } from "@nestjs/swagger";
+import { IsIn } from "class-validator";
 import { EmbeddingService } from "../llm/embedding.service";
+import { LlmProvider, LlmService } from "../llm/llm.service";
 import { SttService } from "../llm/stt.service";
 import { JwtAuthGuard } from "./guards/jwt-auth.guard";
 
 class UpdateLlmDto {
+  @ApiProperty({ enum: ["centrinvest", "gemini", "ollama"] })
+  @IsIn(["centrinvest", "gemini", "ollama"])
   provider: LlmProvider;
 }
 
@@ -21,13 +24,13 @@ export class SettingsController {
   ) {}
 
   @Get("llm")
-  @ApiOperation({ summary: "Текущий AI провайдер" })
+  @ApiOperation({ summary: "Текущий AI-провайдер" })
   getLlm() {
     return this.llm.getProviderInfo();
   }
 
   @Put("llm")
-  @ApiOperation({ summary: "Сменить AI провайдер" })
+  @ApiOperation({ summary: "Сменить AI-провайдер" })
   setLlm(@Body() dto: UpdateLlmDto) {
     this.llm.switchProvider(dto.provider);
     this.embedding.switchProvider(dto.provider);

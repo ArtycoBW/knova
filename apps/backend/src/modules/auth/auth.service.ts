@@ -155,7 +155,9 @@ export class AuthService {
       throw new UnauthorizedException("Пользователь не найден");
     }
 
-    await this.prisma.session.delete({ where: { id: session.id } });
+    await this.prisma.session.deleteMany({
+      where: { id: session.id, refreshToken: session.refreshToken },
+    });
     return this.generateTokens(user.id, user.email);
   }
 

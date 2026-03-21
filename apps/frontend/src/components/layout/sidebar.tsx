@@ -82,18 +82,10 @@ interface NavItemProps {
 }
 
 function NavItem({ item, active, collapsed }: NavItemProps) {
-  return (
-    <Link
-      href={item.href}
-      data-tour={item.tour}
-      className={cn(
-        "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
-        active
-          ? "bg-primary/15 text-primary font-medium shadow-sm shadow-primary/10"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground",
-        collapsed && "justify-center px-2",
-      )}
-    >
+  const isHardNavigation = item.href === "/chat";
+
+  const content = (
+    <>
       {active && (
         <motion.div
           layoutId="active-nav"
@@ -121,6 +113,32 @@ function NavItem({ item, active, collapsed }: NavItemProps) {
           {item.label}
         </div>
       )}
+    </>
+  );
+
+  const className = cn(
+    "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-all duration-200",
+    active
+      ? "bg-primary/15 text-primary font-medium shadow-sm shadow-primary/10"
+      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+    collapsed && "justify-center px-2",
+  );
+
+  if (isHardNavigation) {
+    return (
+      <a href={item.href} data-tour={item.tour} className={className}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link
+      href={item.href}
+      data-tour={item.tour}
+      className={className}
+    >
+      {content}
     </Link>
   );
 }

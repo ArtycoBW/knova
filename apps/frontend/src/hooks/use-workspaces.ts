@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import { api, getErrorMessage } from "@/lib/api";
 import { useToast } from "@/providers/toast-provider";
-import { useRouter } from "next/navigation";
 
 export interface Workspace {
   id: string;
@@ -80,10 +80,19 @@ export function useCreateWorkspace() {
     onSuccess: (workspace) => {
       qc.invalidateQueries({ queryKey: ["workspaces"] });
       qc.invalidateQueries({ queryKey: ["workspace-stats"] });
-      toast.show({ variant: "success", title: "Воркспейс создан", message: workspace.name });
+      toast.show({
+        variant: "success",
+        title: "Воркспейс создан",
+        message: workspace.name,
+      });
       router.push(`/workspace/${workspace.id}`);
     },
-    onError: (err) => toast.show({ variant: "error", title: "Ошибка", message: getErrorMessage(err) }),
+    onError: (err) =>
+      toast.show({
+        variant: "error",
+        title: "Ошибка",
+        message: getErrorMessage(err),
+      }),
   });
 }
 
@@ -98,11 +107,17 @@ export function useUpdateWorkspace(id: string) {
       qc.invalidateQueries({ queryKey: ["workspace", id] });
       qc.invalidateQueries({ queryKey: ["workspaces"] });
       toast.show({
-        variant: "success", title: "Сохранено",
-        message: ""
+        variant: "success",
+        title: "Сохранено",
+        message: "",
       });
     },
-    onError: (err) => toast.show({ variant: "error", title: "Ошибка", message: getErrorMessage(err) }),
+    onError: (err) =>
+      toast.show({
+        variant: "error",
+        title: "Ошибка",
+        message: getErrorMessage(err),
+      }),
   });
 }
 
@@ -117,12 +132,18 @@ export function useDeleteWorkspace() {
       qc.invalidateQueries({ queryKey: ["workspaces"] });
       qc.invalidateQueries({ queryKey: ["workspace-stats"] });
       toast.show({
-        variant: "success", title: "Воркспейс удалён",
-        message: ""
+        variant: "success",
+        title: "Воркспейс удалён",
+        message: "",
       });
       router.push("/dashboard");
     },
-    onError: (err) => toast.show({ variant: "error", title: "Ошибка", message: getErrorMessage(err) }),
+    onError: (err) =>
+      toast.show({
+        variant: "error",
+        title: "Ошибка",
+        message: getErrorMessage(err),
+      }),
   });
 }
 
@@ -149,16 +170,27 @@ export function useUploadDocument(workspaceId: string) {
     mutationFn: (file: File) => {
       const form = new FormData();
       form.append("file", file);
-      return api.post(`/workspaces/${workspaceId}/documents`, form, {
-        headers: { "Content-Type": "multipart/form-data" },
-      }).then((r) => r.data);
+      return api
+        .post(`/workspaces/${workspaceId}/documents`, form, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+        .then((r) => r.data);
     },
     onSuccess: (doc) => {
       qc.invalidateQueries({ queryKey: ["documents", workspaceId] });
       qc.invalidateQueries({ queryKey: ["workspace", workspaceId] });
-      toast.show({ variant: "success", title: "Файл загружен", message: doc.name });
+      toast.show({
+        variant: "success",
+        title: "Файл загружен",
+        message: doc.name,
+      });
     },
-    onError: (err) => toast.show({ variant: "error", title: "Ошибка загрузки", message: getErrorMessage(err) }),
+    onError: (err) =>
+      toast.show({
+        variant: "error",
+        title: "Ошибка загрузки",
+        message: getErrorMessage(err),
+      }),
   });
 }
 
@@ -172,11 +204,17 @@ export function useDeleteDocument(workspaceId: string) {
       qc.invalidateQueries({ queryKey: ["documents", workspaceId] });
       qc.invalidateQueries({ queryKey: ["workspace", workspaceId] });
       toast.show({
-        variant: "success", title: "Документ удалён",
-        message: ""
+        variant: "success",
+        title: "Документ удалён",
+        message: "",
       });
     },
-    onError: (err) => toast.show({ variant: "error", title: "Ошибка", message: getErrorMessage(err) }),
+    onError: (err) =>
+      toast.show({
+        variant: "error",
+        title: "Ошибка",
+        message: getErrorMessage(err),
+      }),
   });
 }
 
@@ -187,6 +225,10 @@ export function useCompareDocuments(workspaceId: string) {
     mutationFn: (documentIds: string[]) =>
       api.post(`/workspaces/${workspaceId}/compare`, { documentIds }).then((r) => r.data),
     onError: (err) =>
-      toast.show({ variant: "error", title: "Не удалось сравнить", message: getErrorMessage(err) }),
+      toast.show({
+        variant: "error",
+        title: "Не удалось сравнить",
+        message: getErrorMessage(err),
+      }),
   });
 }

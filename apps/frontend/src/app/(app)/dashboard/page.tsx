@@ -105,12 +105,13 @@ export default function DashboardPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.05 }}
+            className="h-full"
           >
-            <Card>
-              <CardContent className="p-4">
+            <Card className="h-full">
+              <CardContent className="flex h-full min-h-[110px] flex-col p-4">
                 <s.icon className={`h-5 w-5 mb-2 ${s.color}`} />
                 <p className="text-2xl font-bold">{s.value}</p>
-                <p className="text-xs text-muted-foreground">{s.label}</p>
+                <p className="mt-auto pt-2 text-xs text-muted-foreground">{s.label}</p>
               </CardContent>
             </Card>
           </motion.div>
@@ -144,10 +145,11 @@ export default function DashboardPage() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.05 }}
+                className="h-full"
               >
                 <Link href={`/workspace/${ws.id}`}>
-                  <Card className="group hover:border-primary/50 hover:shadow-md hover:shadow-primary/5 transition-all cursor-pointer">
-                    <CardContent className="p-5">
+                  <Card className="group h-full hover:border-primary/50 hover:shadow-md hover:shadow-primary/5 transition-all cursor-pointer">
+                    <CardContent className="flex min-h-[164px] flex-col p-5">
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 group-hover:bg-primary/20 transition-colors">
                           <FolderOpen className="h-5 w-5 text-primary" />
@@ -159,10 +161,14 @@ export default function DashboardPage() {
                         )}
                       </div>
                       <h3 className="font-semibold text-sm mb-1 truncate">{ws.name}</h3>
-                      {ws.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{ws.description}</p>
-                      )}
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="mb-3 min-h-[2.5rem]">
+                        {ws.description ? (
+                          <p className="text-xs text-muted-foreground line-clamp-2">{ws.description}</p>
+                        ) : (
+                          <p className="text-xs text-transparent select-none">.</p>
+                        )}
+                      </div>
+                      <div className="mt-auto flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <BookOpen className="h-3 w-3" />
                           {ws.readyCount}/{ws.documentCount} готово

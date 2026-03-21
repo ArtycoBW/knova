@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { Queue } from "bullmq";
-import ffmpeg from "fluent-ffmpeg";
+import * as ffmpeg from "fluent-ffmpeg";
 import * as fs from "fs";
 import * as path from "path";
 import pdfParse from "pdf-parse";
@@ -22,10 +22,32 @@ const ALLOWED_MIME: Record<string, string> = {
   "audio/mpeg": "audio",
   "audio/mp3": "audio",
   "audio/wav": "audio",
+  "audio/x-wav": "audio",
+  "audio/wave": "audio",
   "audio/ogg": "audio",
+  "audio/webm": "audio",
   "audio/x-m4a": "audio",
   "audio/mp4": "audio",
   "video/mp4": "video",
+  "video/webm": "video",
+  "video/quicktime": "video",
+};
+
+const EXTENSION_MIME: Record<string, { mimeType: string; kind: string }> = {
+  ".pdf": { mimeType: "application/pdf", kind: "document" },
+  ".docx": {
+    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    kind: "document",
+  },
+  ".txt": { mimeType: "text/plain", kind: "document" },
+  ".md": { mimeType: "text/markdown", kind: "document" },
+  ".mp3": { mimeType: "audio/mpeg", kind: "audio" },
+  ".wav": { mimeType: "audio/wav", kind: "audio" },
+  ".ogg": { mimeType: "audio/ogg", kind: "audio" },
+  ".m4a": { mimeType: "audio/mp4", kind: "audio" },
+  ".webm": { mimeType: "video/webm", kind: "video" },
+  ".mp4": { mimeType: "video/mp4", kind: "video" },
+  ".mov": { mimeType: "video/quicktime", kind: "video" },
 };
 
 @Injectable()
@@ -47,27 +69,34 @@ export class DocumentsService {
     if (!workspace) throw new NotFoundException("Воркспейс не найден");
     if (workspace.userId !== userId) throw new ForbiddenException("Нет доступа");
 
-    const kind = ALLOWED_MIME[file.mimetype];
-    if (!kind) throw new BadRequestException("Неподдерживаемый тип файла");
+    const normalized = this.normalizeFileType(file.originalname, file.mimetype);
+    if (!normalized) {
+      throw new BadRequestException("Неподдерживаемый тип файла");
+    }
 
-    const metadata = await this.extractMetadata(file.path, file.mimetype);
+    const metadata = await this.extractMetadata(file.path, normalized.mimeType);
 
     const document = await this.prisma.document.create({
       data: {
         workspaceId,
         name: path.parse(file.originalname).name,
         originalName: file.originalname,
-        mimeType: file.mimetype,
+        mimeType: normalized.mimeType,
         size: file.size,
         path: file.path,
-        sourceType: kind === "document" ? "FILE" : kind === "audio" ? "AUDIO" : "VIDEO",
+        sourceType:
+          normalized.kind === "document"
+            ? "FILE"
+            : normalized.kind === "audio"
+              ? "AUDIO"
+              : "VIDEO",
         status: "PENDING",
         pageCount: metadata.pageCount,
         duration: metadata.duration,
       },
     });
 
-    if (kind === "document") {
+    if (normalized.kind === "document") {
       await this.docQueue.add(
         "process",
         { documentId: document.id },
@@ -145,6 +174,25 @@ export class DocumentsService {
     return { message: "Документ удалён" };
   }
 
+  private normalizeFileType(originalName: string, mimeType: string) {
+    const byMime = ALLOWED_MIME[mimeType];
+    if (byMime) {
+      return { mimeType, kind: byMime };
+    }
+
+    const ext = path.extname(originalName).toLowerCase();
+    const byExt = EXTENSION_MIME[ext];
+    if (byExt) {
+      return byExt;
+    }
+
+    if (mimeType === "application/octet-stream" && byExt) {
+      return byExt;
+    }
+
+    return null;
+  }
+
   private async extractMetadata(filePath: string, mimeType: string) {
     if (mimeType === "application/pdf") {
       const result = await pdfParse(fs.readFileSync(filePath));
@@ -153,7 +201,7 @@ export class DocumentsService {
 
     if (mimeType.startsWith("audio/") || mimeType.startsWith("video/")) {
       const duration = await new Promise<number | undefined>((resolve) => {
-        ffmpeg.ffprobe(filePath, (error, metadata) => {
+        ffmpeg(filePath).ffprobe((error, metadata) => {
           if (error) {
             resolve(undefined);
             return;

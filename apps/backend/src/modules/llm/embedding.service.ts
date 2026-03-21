@@ -1,15 +1,15 @@
 import { Injectable, Logger } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { Embeddings } from "@langchain/core/embeddings";
-import { OpenAIEmbeddings } from "@langchain/openai";
 import { GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 import { OllamaEmbeddings } from "@langchain/ollama";
+import { OpenAIEmbeddings } from "@langchain/openai";
 import { LlmProvider } from "./llm.service";
 
 @Injectable()
 export class EmbeddingService {
   private readonly logger = new Logger(EmbeddingService.name);
-  private embedder: Embeddings;
+  private embedder?: Embeddings;
   private currentProvider: LlmProvider;
 
   constructor(private readonly config: ConfigService) {
@@ -17,7 +17,6 @@ export class EmbeddingService {
       "LLM_PROVIDER",
       "centrinvest",
     ) as LlmProvider;
-    this.embedder = this.createEmbedder(this.currentProvider);
     this.logger.log(`Embedding provider: ${this.currentProvider}`);
   }
 
@@ -46,19 +45,27 @@ export class EmbeddingService {
     }
   }
 
+  private getEmbedder() {
+    if (!this.embedder) {
+      this.embedder = this.createEmbedder(this.currentProvider);
+    }
+
+    return this.embedder;
+  }
+
   switchProvider(provider: LlmProvider): void {
     this.currentProvider = provider;
-    this.embedder = this.createEmbedder(provider);
+    this.embedder = undefined;
     this.logger.log(`Switched embedding provider to: ${provider}`);
   }
 
   async embed(text: string): Promise<number[]> {
-    const embedding = await this.embedder.embedQuery(text);
+    const embedding = await this.getEmbedder().embedQuery(text);
     return this.normalizeDimensions(embedding);
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
-    const embeddings = await this.embedder.embedDocuments(texts);
+    const embeddings = await this.getEmbedder().embedDocuments(texts);
     return embeddings.map((embedding) => this.normalizeDimensions(embedding));
   }
 

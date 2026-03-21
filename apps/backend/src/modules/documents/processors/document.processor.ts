@@ -5,6 +5,7 @@ import { Job } from "bullmq";
 import * as fs from "fs";
 import * as mammoth from "mammoth";
 import pdfParse from "pdf-parse";
+import { ChatGateway } from "../../chat/chat.gateway";
 import { EmbeddingService } from "../../llm/embedding.service";
 import { PrismaService } from "../../prisma/prisma.service";
 
@@ -15,6 +16,7 @@ export class DocumentProcessor extends WorkerHost {
   constructor(
     private readonly prisma: PrismaService,
     private readonly embeddingService: EmbeddingService,
+    private readonly chatGateway: ChatGateway,
   ) {
     super();
   }
@@ -40,11 +42,26 @@ export class DocumentProcessor extends WorkerHost {
           },
         },
       });
+
+      this.chatGateway.emitDocumentProgress(doc.workspace.userId, doc.workspace.id, {
+        documentId,
+        percent: 5,
+        step: "Извлекаем текст",
+        status: "PROCESSING",
+      });
+
       const text = await this.extractText(doc.path, doc.mimeType);
       const chunks = this.chunkText(text, 800, 150);
 
       await this.prisma.documentChunk.deleteMany({
         where: { documentId },
+      });
+
+      this.chatGateway.emitDocumentProgress(doc.workspace.userId, doc.workspace.id, {
+        documentId,
+        percent: 20,
+        step: "Создаём векторные фрагменты",
+        status: "PROCESSING",
       });
 
       for (let i = 0; i < chunks.length; i++) {
@@ -60,7 +77,15 @@ export class DocumentProcessor extends WorkerHost {
             NOW()
           )
         `;
-        await job.updateProgress(Math.round(((i + 1) / chunks.length) * 90));
+
+        const percent = 20 + Math.round(((i + 1) / chunks.length) * 70);
+        await job.updateProgress(percent);
+        this.chatGateway.emitDocumentProgress(doc.workspace.userId, doc.workspace.id, {
+          documentId,
+          percent,
+          step: "Создаём векторные фрагменты",
+          status: "PROCESSING",
+        });
       }
 
       await this.prisma.document.update({
@@ -68,7 +93,7 @@ export class DocumentProcessor extends WorkerHost {
         data: { status: "READY", extractedText: text.slice(0, 5000) },
       });
 
-      await this.prisma.notification.create({
+      const notification = await this.prisma.notification.create({
         data: {
           userId: doc.workspace.userId,
           type: NotificationType.DOCUMENT_READY,
@@ -80,6 +105,17 @@ export class DocumentProcessor extends WorkerHost {
           },
         },
       });
+
+      this.chatGateway.emitDocumentProgress(doc.workspace.userId, doc.workspace.id, {
+        documentId,
+        percent: 100,
+        step: "Документ готов",
+        status: "READY",
+      });
+      this.chatGateway.emitDocumentReady(doc.workspace.userId, doc.workspace.id, {
+        documentId,
+      });
+      this.chatGateway.emitNotification(doc.workspace.userId, notification);
 
       this.logger.log(`Документ ${documentId} обработан, чанков: ${chunks.length}`);
     } catch (error) {
@@ -102,7 +138,7 @@ export class DocumentProcessor extends WorkerHost {
       });
 
       if (doc?.workspace?.userId) {
-        await this.prisma.notification.create({
+        const notification = await this.prisma.notification.create({
           data: {
             userId: doc.workspace.userId,
             type: NotificationType.SYSTEM,
@@ -114,6 +150,12 @@ export class DocumentProcessor extends WorkerHost {
             },
           },
         });
+
+        this.chatGateway.emitDocumentError(doc.workspace.userId, doc.workspace.id, {
+          documentId,
+          error: "Не удалось обработать документ",
+        });
+        this.chatGateway.emitNotification(doc.workspace.userId, notification);
       }
 
       throw error;

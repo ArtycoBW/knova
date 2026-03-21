@@ -1,11 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Bell, BellRing } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { getRealtimeSocket } from "@/lib/realtime";
 import { useMarkNotificationRead, useNotifications } from "@/hooks/use-users";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,13 +17,29 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 
 export function NotificationBell() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const { data, isLoading } = useNotifications();
   const markRead = useMarkNotificationRead();
+
+  useEffect(() => {
+    const socket = getRealtimeSocket();
+    if (!socket) {
+      return;
+    }
+
+    const handleNotification = () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    };
+
+    socket.on("notification", handleNotification);
+    return () => {
+      socket.off("notification", handleNotification);
+    };
+  }, [queryClient]);
 
   const unreadCount = data?.filter((item) => !item.read).length ?? 0;
 

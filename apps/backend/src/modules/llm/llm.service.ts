@@ -44,6 +44,7 @@ export class LlmService {
       case "centrinvest":
         return new ChatOpenAI({
           openAIApiKey: this.config.get("CENTRINVEST_API_KEY"),
+          model: this.config.get("CENTRINVEST_LLM_MODEL", "gpt-oss-20b"),
           configuration: {
             baseURL: this.config.get("CENTRINVEST_LLM_URL"),
           },
@@ -129,7 +130,7 @@ export class LlmService {
   private getModelName(): string {
     switch (this.currentProvider) {
       case "centrinvest":
-        return "centrinvest-llm";
+        return this.config.get("CENTRINVEST_LLM_MODEL", "gpt-oss-20b");
       case "gemini":
         return this.config.get("GEMINI_MODEL", "gemini-2.0-flash");
       case "ollama":

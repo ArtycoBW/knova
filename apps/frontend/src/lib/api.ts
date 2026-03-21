@@ -2,11 +2,18 @@ import axios from "axios";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL,
-  headers: { "Content-Type": "application/json" },
   withCredentials: false,
 });
 
 api.interceptors.request.use((config) => {
+  if (config.data instanceof FormData && config.headers) {
+    if (typeof config.headers.delete === "function") {
+      config.headers.delete("Content-Type");
+    } else {
+      delete config.headers["Content-Type"];
+    }
+  }
+
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("accessToken");
     if (token) {

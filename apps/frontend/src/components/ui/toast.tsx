@@ -4,10 +4,10 @@ import { forwardRef, useImperativeHandle, useRef } from "react";
 import { motion } from "framer-motion";
 import { Toaster as SonnerToaster, toast as sonnerToast } from "sonner";
 import {
-  CheckCircle,
   AlertCircle,
-  Info,
   AlertTriangle,
+  CheckCircle,
+  Info,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -108,24 +108,19 @@ const Toaster = forwardRef<ToasterRef, { defaultPosition?: Position }>(
               exit="exit"
               transition={{ duration: 0.3, ease: "easeOut" }}
               className={cn(
-                "flex items-center justify-between w-full max-w-xs p-3 rounded-xl border shadow-md",
+                "flex w-full max-w-xs items-center gap-3 rounded-xl border p-3 shadow-md",
                 variantStyles[variant],
               )}
             >
-              <div className="flex items-start gap-2">
-                <Icon
-                  className={cn(
-                    "h-4 w-4 mt-0.5 flex-shrink-0",
-                    iconColor[variant],
-                  )}
-                />
-                <div className="space-y-0.5">
+              <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                <Icon className={cn("h-4 w-4 shrink-0", iconColor[variant])} />
+                <div className="min-w-0 space-y-0.5">
                   {title && (
                     <h3
                       className={cn(
                         "text-xs font-medium leading-none",
                         highlightTitle
-                          ? titleColor["success"]
+                          ? titleColor.success
                           : titleColor[variant],
                       )}
                     >
@@ -136,7 +131,7 @@ const Toaster = forwardRef<ToasterRef, { defaultPosition?: Position }>(
                 </div>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex shrink-0 items-center gap-2 self-center">
                 {actions?.label && (
                   <Button
                     variant={actions.variant || "outline"}
@@ -148,12 +143,12 @@ const Toaster = forwardRef<ToasterRef, { defaultPosition?: Position }>(
                     className={cn(
                       "cursor-pointer",
                       variant === "success"
-                        ? "text-emerald-600 border-emerald-600 hover:bg-emerald-600/10 dark:hover:bg-emerald-400/20"
+                        ? "border-emerald-600 text-emerald-600 hover:bg-emerald-600/10 dark:hover:bg-emerald-400/20"
                         : variant === "error"
-                          ? "text-destructive border-destructive hover:bg-destructive/10"
+                          ? "border-destructive text-destructive hover:bg-destructive/10"
                           : variant === "warning"
-                            ? "text-amber-600 border-amber-600 hover:bg-amber-600/10"
-                            : "text-foreground border-border hover:bg-muted/10",
+                            ? "border-amber-600 text-amber-600 hover:bg-amber-600/10"
+                            : "border-border text-foreground hover:bg-muted/10",
                     )}
                   >
                     {actions.label}
@@ -165,7 +160,7 @@ const Toaster = forwardRef<ToasterRef, { defaultPosition?: Position }>(
                     sonnerToast.dismiss(toastId);
                     onDismiss?.();
                   }}
-                  className="rounded-full p-1 hover:bg-muted/50 dark:hover:bg-muted/30 transition-colors focus:outline-none"
+                  className="rounded-full p-1 transition-colors hover:bg-muted/50 dark:hover:bg-muted/30 focus:outline-none"
                   aria-label="Закрыть уведомление"
                 >
                   <X className="h-3 w-3 text-muted-foreground" />
