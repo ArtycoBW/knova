@@ -9,7 +9,7 @@ import { Queue } from "bullmq";
 import * as ffmpeg from "fluent-ffmpeg";
 import * as fs from "fs";
 import * as path from "path";
-import pdfParse from "pdf-parse";
+import pdfParse = require("pdf-parse");
 import { PrismaService } from "../prisma/prisma.service";
 
 const ALLOWED_MIME: Record<string, string> = {

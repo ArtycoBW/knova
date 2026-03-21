@@ -26,7 +26,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     pathname.startsWith("/chat/") ||
     pathname.startsWith("/mindmap/") ||
     pathname.startsWith("/podcast/") ||
-    pathname.startsWith("/quiz/");
+    pathname.startsWith("/quiz/") ||
+    pathname.startsWith("/table/") ||
+    pathname.startsWith("/infographic/");
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

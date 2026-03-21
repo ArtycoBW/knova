@@ -836,7 +836,9 @@ function WorkspacePageContent() {
               generator.href === "chat" ||
               generator.href === "mindmap" ||
               generator.href === "podcast" ||
-              generator.href === "quiz"
+              generator.href === "quiz" ||
+              generator.href === "table" ||
+              generator.href === "infographic"
             ) {
               return (
                 <a

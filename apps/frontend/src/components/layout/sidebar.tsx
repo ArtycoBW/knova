@@ -86,7 +86,9 @@ function NavItem({ item, active, collapsed }: NavItemProps) {
     item.href === "/chat" ||
     item.href === "/mindmap" ||
     item.href === "/podcast" ||
-    item.href === "/quiz";
+    item.href === "/quiz" ||
+    item.href === "/table" ||
+    item.href === "/infographic";
 
   const content = (
     <>

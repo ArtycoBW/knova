@@ -4,7 +4,7 @@ import { NotificationType } from "@prisma/client";
 import { Job } from "bullmq";
 import * as fs from "fs";
 import * as mammoth from "mammoth";
-import pdfParse from "pdf-parse";
+import pdfParse = require("pdf-parse");
 import { ChatGateway } from "../../chat/chat.gateway";
 import { EmbeddingService } from "../../llm/embedding.service";
 import { PrismaService } from "../../prisma/prisma.service";
