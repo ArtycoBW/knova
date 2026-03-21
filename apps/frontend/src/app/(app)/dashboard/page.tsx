@@ -34,8 +34,8 @@ function CreateModal({ onClose }: { onClose: () => void }) {
         <DialogHeader>
           <DialogTitle>Новый воркспейс</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
+        <div className="space-y-5">
+          <div className="space-y-2.5!">
             <Label htmlFor="ws-name">Название *</Label>
             <Input
               id="ws-name"
@@ -46,7 +46,7 @@ function CreateModal({ onClose }: { onClose: () => void }) {
               placeholder="Диплом по ИИ..."
             />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2.5!">
             <Label htmlFor="ws-desc">Описание (необязательно)</Label>
             <Textarea
               id="ws-desc"
@@ -56,13 +56,15 @@ function CreateModal({ onClose }: { onClose: () => void }) {
               placeholder="Материалы по теме..."
             />
           </div>
-          <Button
-            className="w-full"
-            onClick={() => create.mutate({ name, description: desc })}
-            disabled={!name.trim() || create.isPending}
-          >
-            {create.isPending ? "Создаём..." : "Создать"}
-          </Button>
+          <div className="pt-1">
+            <Button
+              className="w-full"
+              onClick={() => create.mutate({ name, description: desc })}
+              disabled={!name.trim() || create.isPending}
+            >
+              {create.isPending ? "Создаём..." : "Создать"}
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

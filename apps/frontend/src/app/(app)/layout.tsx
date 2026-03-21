@@ -22,7 +22,8 @@ function AuthInitializer() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
-  const isChatWorkspaceRoute = pathname.startsWith("/chat/");
+  const isCanvasRoute =
+    pathname.startsWith("/chat/") || pathname.startsWith("/mindmap/");
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -49,7 +50,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <main
           className={cn(
             "flex-1 p-4 md:p-6",
-            isChatWorkspaceRoute ? "overflow-hidden" : "overflow-y-auto",
+            isCanvasRoute ? "overflow-hidden" : "overflow-y-auto",
           )}
         >
           {children}

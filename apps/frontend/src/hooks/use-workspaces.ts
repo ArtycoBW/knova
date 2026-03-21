@@ -128,15 +128,23 @@ export function useDeleteWorkspace() {
 
   return useMutation({
     mutationFn: (id: string) => api.delete(`/workspaces/${id}`).then((r) => r.data),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["workspaces"] });
-      qc.invalidateQueries({ queryKey: ["workspace-stats"] });
+    onSuccess: async (_, deletedWorkspaceId) => {
+      qc.removeQueries({ queryKey: ["workspace", deletedWorkspaceId] });
+      qc.removeQueries({ queryKey: ["documents", deletedWorkspaceId] });
+      qc.removeQueries({ queryKey: ["chat", deletedWorkspaceId] });
+      qc.removeQueries({ queryKey: ["mindmap", deletedWorkspaceId] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["workspaces"] }),
+        qc.invalidateQueries({ queryKey: ["workspace-stats"] }),
+        qc.invalidateQueries({ queryKey: ["notifications"] }),
+      ]);
       toast.show({
         variant: "success",
         title: "Воркспейс удалён",
         message: "",
       });
-      router.push("/dashboard");
+      router.replace("/dashboard");
+      router.refresh();
     },
     onError: (err) =>
       toast.show({

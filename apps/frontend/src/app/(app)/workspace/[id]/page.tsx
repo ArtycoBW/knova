@@ -846,6 +846,20 @@ function WorkspacePageContent() {
               );
             }
 
+            if (generator.href === "mindmap") {
+              return (
+                <a
+                  key={generator.href}
+                  href={hasReadyDocs ? href : "#"}
+                  className={className}
+                  onClick={(event) => !hasReadyDocs && event.preventDefault()}
+                >
+                  <generator.icon className="h-5 w-5" />
+                  <span className="text-xs font-medium">{generator.label}</span>
+                </a>
+              );
+            }
+
             return (
               <Link
                 key={generator.href}

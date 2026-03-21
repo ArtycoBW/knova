@@ -3,6 +3,7 @@ import { Syne, Inter, JetBrains_Mono } from "next/font/google";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ToastProvider } from "@/providers/toast-provider";
 import { QueryProvider } from "@/providers/query-provider";
+import "@xyflow/react/dist/style.css";
 import "./globals.css";
 
 const syne = Syne({
