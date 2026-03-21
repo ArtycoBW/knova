@@ -832,21 +832,12 @@ function WorkspacePageContent() {
               hasReadyDocs ? `cursor-pointer ${generator.color}` : "cursor-not-allowed opacity-50"
             }`;
 
-            if (generator.href === "chat") {
-              return (
-                <a
-                  key={generator.href}
-                  href={hasReadyDocs ? href : "#"}
-                  className={className}
-                  onClick={(event) => !hasReadyDocs && event.preventDefault()}
-                >
-                  <generator.icon className="h-5 w-5" />
-                  <span className="text-xs font-medium">{generator.label}</span>
-                </a>
-              );
-            }
-
-            if (generator.href === "mindmap") {
+            if (
+              generator.href === "chat" ||
+              generator.href === "mindmap" ||
+              generator.href === "podcast" ||
+              generator.href === "quiz"
+            ) {
               return (
                 <a
                   key={generator.href}

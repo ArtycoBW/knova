@@ -82,7 +82,11 @@ interface NavItemProps {
 }
 
 function NavItem({ item, active, collapsed }: NavItemProps) {
-  const isHardNavigation = item.href === "/chat" || item.href === "/mindmap";
+  const isHardNavigation =
+    item.href === "/chat" ||
+    item.href === "/mindmap" ||
+    item.href === "/podcast" ||
+    item.href === "/quiz";
 
   const content = (
     <>

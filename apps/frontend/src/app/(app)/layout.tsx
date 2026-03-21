@@ -25,7 +25,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const isCanvasRoute =
     pathname.startsWith("/chat/") ||
     pathname.startsWith("/mindmap/") ||
-    pathname.startsWith("/podcast/");
+    pathname.startsWith("/podcast/") ||
+    pathname.startsWith("/quiz/");
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
