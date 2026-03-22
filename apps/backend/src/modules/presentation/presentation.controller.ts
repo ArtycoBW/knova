@@ -55,6 +55,10 @@ export class PresentationController {
       workspaceId,
       req.user.id,
     );
+    const asciiFileName = file.fileName
+      .replace(/[^\x20-\x7E]+/g, "_")
+      .replace(/_+/g, "_");
+    const encodedFileName = encodeURIComponent(file.fileName);
 
     reply
       .header(
@@ -63,7 +67,7 @@ export class PresentationController {
       )
       .header(
         "Content-Disposition",
-        `attachment; filename="${file.fileName}"`,
+        `attachment; filename="${asciiFileName}"; filename*=UTF-8''${encodedFileName}`,
       )
       .send(file.buffer);
   }

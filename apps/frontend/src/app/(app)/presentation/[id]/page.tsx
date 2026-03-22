@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 import {
@@ -17,7 +18,6 @@ import {
   Video,
   WandSparkles,
 } from "lucide-react";
-import { useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -86,27 +86,27 @@ function SlidePreview({
   index: number;
 }) {
   return (
-    <div className="w-full overflow-y-auto rounded-[1.5rem] border border-border/70 bg-[linear-gradient(135deg,rgba(16,24,38,0.96),rgba(11,17,23,0.92))] p-6 shadow-[0_22px_48px_rgba(0,0,0,0.22)] max-xl:max-h-[26rem] xl:h-full">
-      <div className="flex h-full flex-col">
-        <div className="mb-5 flex items-start justify-between gap-4">
+    <div className="h-full w-full overflow-y-auto rounded-[1.75rem] border border-border/70 bg-[linear-gradient(135deg,rgba(16,24,38,0.99),rgba(15,23,42,0.99))] p-8 shadow-[0_22px_48px_rgba(0,0,0,0.24)]">
+      <div className="flex min-h-full flex-col">
+        <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-slate-400">
+            <p className="text-xs uppercase tracking-[0.24em] text-slate-400">
               Слайд {index + 1}
             </p>
-            <h3 className="mt-2 text-2xl font-semibold leading-tight text-slate-50">
+            <h3 className="mt-3 text-3xl font-semibold leading-tight text-slate-50">
               {slide.title}
             </h3>
           </div>
-          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-2 text-orange-400">
+          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/10 p-2.5 text-orange-400">
             <MonitorPlay className="h-4 w-4" />
           </div>
         </div>
 
-        <div className="grid flex-1 gap-3">
+        <div className="grid flex-1 gap-4">
           {slide.bullets.map((bullet, bulletIndex) => (
             <div
               key={`${index}-${bulletIndex}`}
-              className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm leading-6 text-slate-100"
+              className="rounded-2xl border border-white/8 bg-white/4 px-5 py-4 text-base leading-7 text-slate-100"
             >
               {bullet}
             </div>
@@ -166,9 +166,11 @@ export default function PresentationWorkspacePage() {
       const contentDisposition = response.headers["content-disposition"] as
         | string
         | undefined;
-      const fileName =
-        contentDisposition?.match(/filename="(.+?)"/)?.[1] ||
-        `${data?.presentation?.title || "presentation"}.pptx`;
+      const utfNameMatch = contentDisposition?.match(/filename\*=UTF-8''([^;]+)/i);
+      const asciiNameMatch = contentDisposition?.match(/filename="(.+?)"/i);
+      const fileName = utfNameMatch?.[1]
+        ? decodeURIComponent(utfNameMatch[1])
+        : asciiNameMatch?.[1] || `${data?.workspace.name || "presentation"}.pptx`;
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -206,13 +208,13 @@ export default function PresentationWorkspacePage() {
     <div className="flex h-full min-h-0 w-full max-w-none flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <a
+          <Link
             href={`/workspace/${id}`}
             className="mb-2 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
             Вернуться к воркспейсу
-          </a>
+          </Link>
           <h1 className="text-3xl font-semibold">Презентация</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Воркспейс: {data.workspace.name}
@@ -298,20 +300,18 @@ export default function PresentationWorkspacePage() {
               </div>
 
               {hasSlides ? (
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleDownloadPptx}
-                    disabled={isDownloading}
-                  >
-                    {isDownloading ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <ArrowDownToLine className="mr-2 h-4 w-4" />
-                    )}
-                    PPTX
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  onClick={handleDownloadPptx}
+                  disabled={isDownloading}
+                >
+                  {isDownloading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowDownToLine className="mr-2 h-4 w-4" />
+                  )}
+                  PPTX
+                </Button>
               ) : null}
             </div>
           </CardHeader>
@@ -321,14 +321,7 @@ export default function PresentationWorkspacePage() {
               <div className="flex h-full min-h-0 flex-col gap-5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline">{slides.length} слайдов</Badge>
-                  <Badge variant="outline">
-                    {data.presentation?.slides.generatedFrom || data.readyDocuments.length} источников
-                  </Badge>
                   <Badge variant="outline">Обновлено {updatedLabel}</Badge>
-                </div>
-
-                <div className="rounded-2xl border border-border bg-muted/10 px-4 py-3 text-sm text-muted-foreground">
-                  {data.presentation?.slides.subtitle || "Структура выступления и тезисы слайдов."}
                 </div>
 
                 <div className="grid min-h-0 flex-1 gap-4 xl:grid-cols-[260px_minmax(0,1fr)]">
@@ -351,58 +344,14 @@ export default function PresentationWorkspacePage() {
                           <p className="mt-2 line-clamp-2 text-sm font-medium">
                             {slide.title}
                           </p>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            {slide.bullets.length} тезиса
-                          </p>
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  <div className="grid min-h-0 gap-4 xl:grid-rows-[minmax(320px,42%)_minmax(0,1fr)]">
+                  <div className="min-h-0">
                     {activeSlide ? (
-                      <>
-                        <SlidePreview slide={activeSlide} index={activeSlideIndex} />
-                        <div className="min-h-0 overflow-y-auto rounded-2xl border border-border/70 bg-muted/10 p-4">
-                          <div className="space-y-4">
-                            <div>
-                              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                                Заголовок
-                              </p>
-                              <h3 className="mt-2 text-xl font-semibold">
-                                {activeSlide.title}
-                              </h3>
-                            </div>
-
-                            <div>
-                              <p className="mb-3 text-xs uppercase tracking-wide text-muted-foreground">
-                                Тезисы
-                              </p>
-                              <div className="space-y-2">
-                                {activeSlide.bullets.map((bullet, bulletIndex) => (
-                                  <div
-                                    key={`${activeSlideIndex}-${bulletIndex}`}
-                                    className="rounded-xl border border-border/70 bg-background/80 px-3 py-2 text-sm leading-6"
-                                  >
-                                    {bullet}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            {activeSlide.note ? (
-                              <div className="rounded-xl border border-orange-500/20 bg-orange-500/10 px-4 py-3">
-                                <p className="text-xs uppercase tracking-wide text-orange-300">
-                                  Подсказка спикеру
-                                </p>
-                                <p className="mt-2 text-sm leading-6 text-orange-100">
-                                  {activeSlide.note}
-                                </p>
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      </>
+                      <SlidePreview slide={activeSlide} index={activeSlideIndex} />
                     ) : null}
                   </div>
                 </div>
@@ -421,10 +370,12 @@ export default function PresentationWorkspacePage() {
                     <Presentation className="h-6 w-6 text-primary" />
                   </div>
                   <div className="space-y-2">
-                    <h2 className="text-xl font-semibold">Пока нет готовых материалов</h2>
+                    <h2 className="text-xl font-semibold">
+                      Пока нет готовых материалов
+                    </h2>
                     <p className="text-sm leading-6 text-muted-foreground">
-                      Загрузите документы, аудио или видео в воркспейс и дождитесь
-                      обработки, чтобы собрать презентацию.
+                      Загрузите документы, аудио или видео в воркспейс и
+                      дождитесь обработки, чтобы собрать презентацию.
                     </p>
                   </div>
                   <Button asChild>
@@ -439,13 +390,17 @@ export default function PresentationWorkspacePage() {
                     <LayoutTemplate className="h-7 w-7" />
                   </div>
                   <div className="space-y-2">
-                    <h2 className="text-2xl font-semibold">Соберите первую презентацию</h2>
+                    <h2 className="text-2xl font-semibold">
+                      Соберите первую презентацию
+                    </h2>
                     <p className="text-sm leading-6 text-muted-foreground">
-                      AI подготовит полноценную структуру слайдов, тезисы для каждого
-                      экрана и готовый экспорт в PPTX.
+                      AI подготовит структуру слайдов и готовый экспорт в PPTX.
                     </p>
                   </div>
-                  <Button onClick={handleGenerate} disabled={generatePresentation.isPending}>
+                  <Button
+                    onClick={handleGenerate}
+                    disabled={generatePresentation.isPending}
+                  >
                     {generatePresentation.isPending ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     ) : (
