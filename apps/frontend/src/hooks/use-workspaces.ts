@@ -137,6 +137,8 @@ export function useDeleteWorkspace() {
       qc.removeQueries({ queryKey: ["quiz", deletedWorkspaceId] });
       qc.removeQueries({ queryKey: ["table", deletedWorkspaceId] });
       qc.removeQueries({ queryKey: ["infographic", deletedWorkspaceId] });
+      qc.removeQueries({ queryKey: ["report", deletedWorkspaceId] });
+      qc.removeQueries({ queryKey: ["presentation", deletedWorkspaceId] });
       await Promise.all([
         qc.invalidateQueries({ queryKey: ["workspaces"] }),
         qc.invalidateQueries({ queryKey: ["workspace-stats"] }),

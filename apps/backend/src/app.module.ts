@@ -15,6 +15,8 @@ import { PodcastModule } from "./modules/podcast/podcast.module";
 import { QuizModule } from "./modules/quiz/quiz.module";
 import { TableModule } from "./modules/table/table.module";
 import { InfographicModule } from "./modules/infographic/infographic.module";
+import { ReportsModule } from "./modules/reports/reports.module";
+import { PresentationModule } from "./modules/presentation/presentation.module";
 import { SearchModule } from "./modules/search/search.module";
 import { BullBoardPlugin } from "./modules/queue/bull-board.plugin";
 import { SettingsController } from "./modules/auth/settings.controller";
@@ -44,6 +46,8 @@ import { SettingsController } from "./modules/auth/settings.controller";
     QuizModule,
     TableModule,
     InfographicModule,
+    ReportsModule,
+    PresentationModule,
     SearchModule,
   ],
   controllers: [SettingsController],

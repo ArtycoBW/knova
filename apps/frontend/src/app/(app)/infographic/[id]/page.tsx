@@ -96,11 +96,11 @@ function getChartButtonLabel(type: ChartType) {
     case "line":
       return "Линия";
     case "pie":
-      return "Pie";
+      return "Круговая";
     case "doughnut":
-      return "Doughnut";
+      return "Кольцевая";
     default:
-      return "Bar";
+      return "Столбцы";
   }
 }
 
@@ -271,7 +271,7 @@ export default function InfographicWorkspacePage() {
           </Badge>
           <Badge className="gap-2 border-cyan-300 bg-cyan-50 text-cyan-700 hover:bg-cyan-100 dark:border-cyan-500/20 dark:bg-cyan-500/15 dark:text-cyan-300 dark:hover:bg-cyan-500/20">
             <PieChart className="h-3.5 w-3.5" />
-            PNG + switch type
+            PNG + смена типа
           </Badge>
         </div>
       </div>
@@ -417,7 +417,7 @@ export default function InfographicWorkspacePage() {
             ) : hasChart ? (
               <div className="flex min-h-0 flex-1 flex-col gap-5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">{effectiveType}</Badge>
+                  <Badge variant="outline">{getChartButtonLabel(effectiveType)}</Badge>
                   <Badge variant="outline">{chartData?.data.labels.length || 0} меток</Badge>
                   <Badge variant="outline">
                     Обновлено{" "}
