@@ -1,9 +1,14 @@
 import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+import { EmbeddingService } from "../llm/embedding.service";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class SearchService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly embeddingService: EmbeddingService,
+  ) {}
 
   async search(userId: string, query: string, type?: string) {
     const q = query.trim();
@@ -17,7 +22,10 @@ export class SearchService {
     const searchDocuments =
       !normalizedType || normalizedType === "all" || normalizedType === "document";
 
-    const [workspaces, documents] = await Promise.all([
+    const semanticResultsPromise =
+      searchDocuments && q.length > 2 ? this.semanticSearch(userId, q) : Promise.resolve([]);
+
+    const [workspaces, documents, semanticResults] = await Promise.all([
       searchWorkspaces
         ? this.prisma.workspace.findMany({
             where: {
@@ -63,7 +71,25 @@ export class SearchService {
             },
           })
         : Promise.resolve([]),
+      semanticResultsPromise,
     ]);
+
+    const lexicalDocuments = documents.map((document) => ({
+      id: document.id,
+      type: "document" as const,
+      title: document.originalName,
+      subtitle:
+        document.extractedText?.replace(/\s+/g, " ").trim().slice(0, 120) ||
+        `Документ в «${document.workspace.name}»`,
+      href: `/workspace/${document.workspaceId}?documentId=${document.id}`,
+    }));
+
+    const mergedDocuments = [
+      ...lexicalDocuments,
+      ...semanticResults.filter(
+        (semantic) => !lexicalDocuments.some((lexical) => lexical.id === semantic.id),
+      ),
+    ].slice(0, 12);
 
     return [
       ...workspaces.map((workspace) => ({
@@ -73,15 +99,52 @@ export class SearchService {
         subtitle: workspace.description || "Воркспейс",
         href: `/workspace/${workspace.id}`,
       })),
-      ...documents.map((document) => ({
-        id: document.id,
-        type: "document" as const,
-        title: document.originalName,
-        subtitle:
-          document.extractedText?.replace(/\s+/g, " ").trim().slice(0, 120) ||
-          `Документ в «${document.workspace.name}»`,
-        href: `/workspace/${document.workspaceId}?documentId=${document.id}`,
-      })),
+      ...mergedDocuments,
     ];
+  }
+
+  private async semanticSearch(userId: string, query: string) {
+    try {
+      const embedding = await this.embeddingService.embed(query);
+      const vector = `[${embedding.join(",")}]`;
+
+      const rows = await this.prisma.$queryRaw<
+        Array<{
+          id: string;
+          originalName: string;
+          workspaceId: string;
+          workspaceName: string;
+          excerpt: string;
+          distance: number;
+        }>
+      >(Prisma.sql`
+        SELECT DISTINCT ON (d.id)
+          d.id,
+          d."originalName",
+          d."workspaceId",
+          w.name AS "workspaceName",
+          LEFT(REPLACE(COALESCE(dc.content, ''), E'\n', ' '), 140) AS excerpt,
+          (dc.embedding <=> ${vector}::vector) AS distance
+        FROM "DocumentChunk" dc
+        JOIN "Document" d ON d.id = dc."documentId"
+        JOIN "Workspace" w ON w.id = d."workspaceId"
+        WHERE w."userId" = ${userId}
+          AND d.status = 'READY'
+          AND dc.embedding IS NOT NULL
+        ORDER BY d.id, distance ASC
+        LIMIT 8
+      `);
+
+      return rows.map((row) => ({
+        id: row.id,
+        type: "document" as const,
+        title: row.originalName,
+        subtitle:
+          row.excerpt?.trim() || `Семантическое совпадение в «${row.workspaceName}»`,
+        href: `/workspace/${row.workspaceId}?documentId=${row.id}`,
+      }));
+    } catch {
+      return [];
+    }
   }
 }

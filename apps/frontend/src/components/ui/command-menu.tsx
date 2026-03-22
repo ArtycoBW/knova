@@ -68,9 +68,6 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
               placeholder="Поиск по воркспейсам и документам..."
               className="h-10 w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
             />
-            <span className="rounded-md border border-border/70 px-2 py-1 text-[10px] text-muted-foreground">
-              Ctrl K
-            </span>
           </div>
 
           <Command.List className="flex-1 overflow-y-auto p-2">
@@ -93,7 +90,7 @@ export function CommandMenu({ open, onOpenChange }: CommandMenuProps) {
             )}
 
             {!!data?.length && (
-              <Command.Group heading="Результаты" className="space-y-1">
+              <Command.Group heading="Результаты" className="flex flex-col gap-y-2">
                 {data.map((item) => (
                   <Command.Item
                     key={item.id}

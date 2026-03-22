@@ -86,7 +86,7 @@ function SlidePreview({
   index: number;
 }) {
   return (
-    <div className="aspect-video w-full rounded-[1.5rem] border border-border/70 bg-[linear-gradient(135deg,rgba(16,24,38,0.96),rgba(11,17,23,0.92))] p-6 shadow-[0_22px_48px_rgba(0,0,0,0.22)]">
+    <div className="w-full overflow-y-auto rounded-[1.5rem] border border-border/70 bg-[linear-gradient(135deg,rgba(16,24,38,0.96),rgba(11,17,23,0.92))] p-6 shadow-[0_22px_48px_rgba(0,0,0,0.22)] max-xl:max-h-[26rem] xl:h-full">
       <div className="flex h-full flex-col">
         <div className="mb-5 flex items-start justify-between gap-4">
           <div>
@@ -103,7 +103,7 @@ function SlidePreview({
         </div>
 
         <div className="grid flex-1 gap-3">
-          {slide.bullets.slice(0, 5).map((bullet, bulletIndex) => (
+          {slide.bullets.map((bullet, bulletIndex) => (
             <div
               key={`${index}-${bulletIndex}`}
               className="rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm leading-6 text-slate-100"
@@ -359,7 +359,7 @@ export default function PresentationWorkspacePage() {
                     </div>
                   </div>
 
-                  <div className="flex min-h-0 flex-col gap-4">
+                  <div className="grid min-h-0 gap-4 xl:grid-rows-[minmax(320px,42%)_minmax(0,1fr)]">
                     {activeSlide ? (
                       <>
                         <SlidePreview slide={activeSlide} index={activeSlideIndex} />

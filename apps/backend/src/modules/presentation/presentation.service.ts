@@ -6,10 +6,11 @@ import {
 } from "@nestjs/common";
 import { InjectQueue } from "@nestjs/bullmq";
 import { GenerationStatus, Prisma } from "@prisma/client";
-import PptxGenJS from "pptxgenjs";
 import { Queue } from "bullmq";
 import { PrismaService } from "../prisma/prisma.service";
 import { QUEUE_NAMES } from "../queue/queue.module";
+
+const PptxGenJS = require("pptxgenjs");
 
 interface EmptySlides {
   title: string;

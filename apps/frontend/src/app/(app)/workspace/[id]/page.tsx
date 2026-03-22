@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   CheckSquare,
   Clock,
+  CopyCheck,
   FileOutput,
   FileText,
   GitCompareArrows,
@@ -333,19 +334,43 @@ function CompareDialog({
 
           <div className="rounded-2xl border border-border bg-muted/20 p-4">
             {!comparison ? (
-              <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">
-                  Выберите два документа и запустите сравнение.
-                </p>
-                <Button
-                  onClick={() => compare.mutate(selected)}
-                  disabled={selected.length !== 2 || compare.isPending}
-                >
-                  {compare.isPending ? "Сравниваем..." : "Запустить сравнение"}
-                </Button>
-              </div>
+              compare.isPending ? (
+                <div className="space-y-4">
+                  <div className="rounded-xl border border-primary/20 bg-primary/10 px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Анализируем и сравниваем документы...
+                    </div>
+                    <div className="mt-3 space-y-2">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <CopyCheck className="h-3.5 w-3.5" />
+                        Сверяем темы и ключевые формулировки
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <GitCompareArrows className="h-3.5 w-3.5" />
+                        Ищем сходства, различия и смысловые пересечения
+                      </div>
+                    </div>
+                  </div>
+                  <Skeleton className="h-20 rounded-xl" />
+                  <Skeleton className="h-28 rounded-xl" />
+                  <Skeleton className="h-36 rounded-xl" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Выберите два документа и запустите сравнение.
+                  </p>
+                  <Button
+                    onClick={() => compare.mutate(selected)}
+                    disabled={selected.length !== 2}
+                  >
+                    Запустить сравнение
+                  </Button>
+                </div>
+              )
             ) : (
-              <div className="space-y-4">
+              <div className="flex max-h-[68vh] flex-col gap-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">
@@ -360,45 +385,84 @@ function CompareDialog({
                     onClick={() => compare.mutate(selected)}
                     disabled={compare.isPending}
                   >
-                    Пересчитать
+                    {compare.isPending ? "Пересчитываем..." : "Пересчитать"}
                   </Button>
                 </div>
+                <div className="min-h-0 overflow-y-auto pr-1">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="mb-2 text-sm font-medium">Общие темы</p>
+                      <div className="flex flex-wrap gap-2">
+                        {comparison.commonTopics.length ? (
+                          comparison.commonTopics.map((topic) => (
+                            <Badge key={topic} variant="secondary">
+                              {topic}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground">
+                            Сильных пересечений не найдено.
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-                <div>
-                  <p className="mb-2 text-sm font-medium">Общие темы</p>
-                  <div className="flex flex-wrap gap-2">
-                    {comparison.commonTopics.length ? (
-                      comparison.commonTopics.map((topic) => (
-                        <Badge key={topic} variant="secondary">
-                          {topic}
-                        </Badge>
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Сильных пересечений не найдено.
-                      </p>
-                    )}
+                    {comparison.overview ? (
+                      <div className="rounded-xl border border-border bg-card p-4">
+                        <p className="text-sm font-semibold">Сводка</p>
+                        <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                          {comparison.overview}
+                        </p>
+                      </div>
+                    ) : null}
+
+                    {comparison.keyDifferences?.length ? (
+                      <div className="rounded-xl border border-border bg-card p-4">
+                        <p className="text-sm font-semibold">Ключевые различия</p>
+                        <div className="mt-3 space-y-2">
+                          {comparison.keyDifferences.map((item) => (
+                            <div
+                              key={item}
+                              className="rounded-lg border border-border/70 bg-background/80 px-3 py-2 text-sm leading-6"
+                            >
+                              {item}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    {comparison.documents.map((document) => (
+                      <div
+                        key={document.id}
+                        className="rounded-xl border border-border bg-card p-4"
+                      >
+                        <p className="text-sm font-semibold">{document.name}</p>
+                        <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                          {document.excerpt}
+                        </p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {(comparison.uniqueTopics[document.id] || []).map((topic) => (
+                            <Badge key={topic} variant="outline">
+                              {topic}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+
+                    {comparison.recommendedFocus ? (
+                      <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-4">
+                        <p className="text-sm font-semibold text-emerald-300">
+                          Рекомендация
+                        </p>
+                        <p className="mt-2 text-sm leading-6 text-emerald-100">
+                          {comparison.recommendedFocus}
+                        </p>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
-
-                {comparison.documents.map((document) => (
-                  <div
-                    key={document.id}
-                    className="rounded-xl border border-border bg-card p-4"
-                  >
-                    <p className="text-sm font-semibold">{document.name}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {document.excerpt}
-                    </p>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {(comparison.uniqueTopics[document.id] || []).map((topic) => (
-                        <Badge key={topic} variant="outline">
-                          {topic}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                ))}
               </div>
             )}
           </div>

@@ -42,6 +42,9 @@ export interface WorkspaceComparison {
     similarity: number;
     commonTopics: string[];
     uniqueTopics: Record<string, string[]>;
+    overview?: string;
+    keyDifferences?: string[];
+    recommendedFocus?: string;
   };
 }
 
