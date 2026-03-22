@@ -48,7 +48,7 @@ export function useSwitchLlmProvider() {
       toast.show({
         variant: "success",
         title: "Провайдер обновлён",
-        message: "Новая конфигурация уже активна",
+        message: "Новая AI-конфигурация уже активна.",
       });
     },
     onError: (error) => {

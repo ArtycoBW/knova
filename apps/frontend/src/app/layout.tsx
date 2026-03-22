@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
 import { Syne, Inter, JetBrains_Mono } from "next/font/google";
+import { PwaProvider } from "@/providers/pwa-provider";
+import { QueryProvider } from "@/providers/query-provider";
 import { ThemeProvider } from "@/providers/theme-provider";
 import { ToastProvider } from "@/providers/toast-provider";
-import { QueryProvider } from "@/providers/query-provider";
 import "@xyflow/react/dist/style.css";
 import "./globals.css";
 
@@ -27,8 +28,15 @@ const jetbrainsMono = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Knova — AI-платформа глубокой переработки знаний",
   description:
-    "Загружайте документы и автоматически преобразовывайте в подкасты, презентации, интеллект-карты, тесты и многое другое",
+    "Загружайте документы и автоматически превращайте их в чаты, карты знаний, подкасты, презентации и другие AI-форматы.",
   manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({
@@ -47,11 +55,11 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <QueryProvider>
-            <ToastProvider>
-              {children}
-            </ToastProvider>
-          </QueryProvider>
+          <PwaProvider>
+            <QueryProvider>
+              <ToastProvider>{children}</ToastProvider>
+            </QueryProvider>
+          </PwaProvider>
         </ThemeProvider>
       </body>
     </html>
