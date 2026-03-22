@@ -8,7 +8,10 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    navigator.serviceWorker.register("/sw.js").catch(() => undefined);
+    navigator.serviceWorker
+      .register("/sw.js")
+      .then((registration) => registration.update())
+      .catch(() => undefined);
   }, []);
 
   return <>{children}</>;

@@ -1,5 +1,10 @@
-const CACHE_NAME = "knova-pwa-v1";
-const APP_SHELL = ["/offline.html", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
+const CACHE_NAME = "knova-pwa-v2";
+const APP_SHELL = [
+  "/offline.html",
+  "/manifest.json",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -34,6 +39,15 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (
+    requestUrl.pathname.startsWith("/api/") ||
+    requestUrl.pathname.startsWith("/_next/") ||
+    requestUrl.pathname.startsWith("/uploads/")
+  ) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request).catch(() => caches.match("/offline.html")),
@@ -48,6 +62,10 @@ self.addEventListener("fetch", (event) => {
       }
 
       return fetch(event.request).then((response) => {
+        if (!APP_SHELL.includes(requestUrl.pathname)) {
+          return response;
+        }
+
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return response;
