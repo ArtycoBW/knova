@@ -272,7 +272,7 @@ function CompareDialog({
       setSelected([]);
       compare.reset();
     }
-  }, [compare, open]);
+  }, [open]);
 
   const toggleDocument = (documentId: string) => {
     setSelected((current) => {

@@ -1,58 +1,26 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CheckCircle2, Cpu, Mic, RefreshCw } from "lucide-react";
-import { api, getErrorMessage } from "@/lib/api";
-import { useToast } from "@/providers/toast-provider";
+import { CheckCircle2, Cpu, Mic, RefreshCw, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-
-interface ProviderInfo {
-  provider: string;
-  model: string;
-  sttAvailable: boolean;
-}
-
-interface ProviderItem {
-  id: string;
-  name: string;
-  description: string;
-  sttAvailable: boolean;
-}
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  useCurrentLlmProvider,
+  useLlmProviders,
+  useSwitchLlmProvider,
+} from "@/hooks/use-settings";
 
 export default function SettingsPage() {
-  const toast = useToast();
-  const queryClient = useQueryClient();
-
-  const currentProvider = useQuery<ProviderInfo>({
-    queryKey: ["settings", "llm"],
-    queryFn: () => api.get("/settings/llm").then((response) => response.data),
-  });
-
-  const providers = useQuery<ProviderItem[]>({
-    queryKey: ["settings", "providers"],
-    queryFn: () => api.get("/settings/llm/providers").then((response) => response.data),
-  });
-
-  const switchProvider = useMutation({
-    mutationFn: (provider: string) =>
-      api.put("/settings/llm", { provider }).then((response) => response.data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["settings", "llm"] });
-      toast.show({ variant: "success", title: "Провайдер обновлён", message: "Настройка сохранена" });
-    },
-    onError: (error) => {
-      toast.show({ variant: "error", title: "Ошибка", message: getErrorMessage(error) });
-    },
-  });
+  const currentProvider = useCurrentLlmProvider();
+  const providers = useLlmProviders();
+  const switchProvider = useSwitchLlmProvider();
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div>
         <h1 className="font-[Syne] text-3xl font-bold">Настройки</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Управляйте активным AI-провайдером и проверяйте готовность инфраструктуры.
+          Управляйте активным AI-провайдером и проверяйте готовность подключённых моделей.
         </p>
       </div>
 
@@ -63,7 +31,8 @@ export default function SettingsPage() {
             AI-провайдер
           </CardTitle>
           <CardDescription>
-            Переключение между Центр-Инвест, Gemini и Ollama без изменения кода.
+            Можно быстро переключаться между Центр-Инвест, Gemini и Ollama без
+            перезапуска интерфейса.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -75,7 +44,11 @@ export default function SettingsPage() {
               </div>
             ) : currentProvider.data ? (
               <div className="flex flex-wrap items-center gap-3">
-                <Badge>{currentProvider.data.provider}</Badge>
+                <Badge className="gap-1 border-primary/20 bg-primary/10 text-primary">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {providers.data?.find((item) => item.id === currentProvider.data?.provider)?.name ??
+                    currentProvider.data.provider}
+                </Badge>
                 <span className="text-sm text-muted-foreground">
                   Модель: {currentProvider.data.model}
                 </span>
@@ -101,13 +74,27 @@ export default function SettingsPage() {
                     <CardDescription>{provider.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      STT: {provider.sttAvailable ? "поддерживается" : "не поддерживается"}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">
+                        STT: {provider.sttAvailable ? "есть" : "нет"}
+                      </Badge>
+                      <Badge variant={provider.available ? "secondary" : "outline"}>
+                        {provider.available ? "Готов" : "Не настроен"}
+                      </Badge>
+                    </div>
+                    {provider.reason ? (
+                      <p className="text-xs leading-5 text-muted-foreground">{provider.reason}</p>
+                    ) : (
+                      <p className="text-xs leading-5 text-muted-foreground">
+                        Провайдер готов к переключению.
+                      </p>
+                    )}
                     <Button
                       className="w-full"
                       variant={active ? "secondary" : "default"}
-                      disabled={active || switchProvider.isPending}
+                      disabled={
+                        active || switchProvider.isPending || !provider.available
+                      }
                       onClick={() => switchProvider.mutate(provider.id)}
                     >
                       {active ? "Активен" : "Выбрать"}

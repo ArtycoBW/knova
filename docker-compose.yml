@@ -54,6 +54,8 @@ services:
     build:
       context: ./apps/backend
       dockerfile: Dockerfile
+    env_file:
+      - ./apps/backend/.env
     ports:
       - "3001:3001"
     environment:
@@ -72,30 +74,7 @@ services:
       REDIS_PORT: 6379
       REDIS_PASSWORD: ""
 
-      LLM_PROVIDER: centrinvest
-      CENTRINVEST_API_KEY: hackaton2026
-      CENTRINVEST_LLM_URL: https://hackai.centrinvest.ru:6630/v1
-      CENTRINVEST_EMBED_MODEL: Qwen3-Embedding-0.6B
-      CENTRINVEST_EMBEDDING_URL: https://hackai.centrinvest.ru:6620/v1
-      CENTRINVEST_STT_URL: https://hackai.centrinvest.ru:6640/v1
-      CENTRINVEST_STT_MODEL: whisper-large-v3-turbo
-
-      GEMINI_API_KEY: ""
-      GEMINI_MODEL: gemini-2.0-flash
-
       OLLAMA_BASE_URL: http://ollama:11434
-      OLLAMA_CHAT_MODEL: llama3.2
-      OLLAMA_EMBED_MODEL: nomic-embed-text
-
-      EMBEDDING_DIMENSIONS: 1024
-
-      UPLOAD_DIR: /app/uploads
-      MAX_FILE_SIZE: 104857600
-
-      BULL_BOARD_USERNAME: admin
-      BULL_BOARD_PASSWORD: admin
-
-      ML_SERVICE_URL: http://ml:8000
     volumes:
       - uploads_data:/app/uploads
     depends_on:

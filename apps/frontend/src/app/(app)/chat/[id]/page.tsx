@@ -120,9 +120,32 @@ export default function ChatWorkspacePage() {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
+  const responseTimeoutRef = useRef<number | null>(null);
+
+  const clearResponseTimeout = () => {
+    if (responseTimeoutRef.current) {
+      window.clearTimeout(responseTimeoutRef.current);
+      responseTimeoutRef.current = null;
+    }
+  };
+
+  const scheduleResponseTimeout = () => {
+    clearResponseTimeout();
+    responseTimeoutRef.current = window.setTimeout(() => {
+      setIsStreaming(false);
+      setStreamText("");
+      setPendingQuestion("");
+      toast.show({
+        variant: "error",
+        title: "Провайдер не ответил",
+        message: "Модель слишком долго не отвечает. Проверьте активный AI-провайдер.",
+      });
+    }, 20000);
+  };
 
   useEffect(() => {
     return () => {
+      clearResponseTimeout();
       recorderRef.current?.stop();
       streamRef.current?.getTracks().forEach((track) => track.stop());
     };
@@ -185,6 +208,7 @@ export default function ChatWorkspacePage() {
         return;
       }
 
+      clearResponseTimeout();
       setPendingQuestion("");
       setActiveSessionId(event.sessionId);
       appendMessage(event.message);
@@ -199,6 +223,7 @@ export default function ChatWorkspacePage() {
         return;
       }
 
+      clearResponseTimeout();
       setActiveSessionId(event.sessionId);
       setIsStreaming(true);
       setStreamText((current) => current + event.chunk);
@@ -219,6 +244,7 @@ export default function ChatWorkspacePage() {
         return;
       }
 
+      clearResponseTimeout();
       appendMessage(event.message);
       setIsStreaming(false);
       setStreamText("");
@@ -235,6 +261,7 @@ export default function ChatWorkspacePage() {
         return;
       }
 
+      clearResponseTimeout();
       setIsStreaming(false);
       setStreamText("");
       setPendingQuestion("");
@@ -280,6 +307,7 @@ export default function ChatWorkspacePage() {
     if (socket) {
       setStreamText("");
       setIsStreaming(true);
+      scheduleResponseTimeout();
       socket.emit("chat:message", {
         workspaceId: id,
         sessionId: activeSessionId || data?.sessionId,
@@ -297,6 +325,7 @@ export default function ChatWorkspacePage() {
         message: getErrorMessage(error),
       });
     } finally {
+      clearResponseTimeout();
       setPendingQuestion("");
       setIsStreaming(false);
     }

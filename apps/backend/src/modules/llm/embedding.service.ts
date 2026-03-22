@@ -20,6 +20,41 @@ export class EmbeddingService {
     this.logger.log(`Embedding provider: ${this.currentProvider}`);
   }
 
+  private getRequestTimeoutMs(provider: LlmProvider) {
+    switch (provider) {
+      case "centrinvest":
+        return 15_000;
+      case "gemini":
+        return 10_000;
+      case "ollama":
+        return 8_000;
+    }
+  }
+
+  private async withTimeout<T>(
+    provider: LlmProvider,
+    promise: Promise<T>,
+    message: string,
+  ) {
+    const timeoutMs = this.getRequestTimeoutMs(provider);
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      return await Promise.race<T>([
+        promise,
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(new Error(message));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
+    }
+  }
+
   private createEmbedder(provider: LlmProvider): Embeddings {
     switch (provider) {
       case "centrinvest":
@@ -34,7 +69,7 @@ export class EmbeddingService {
       case "gemini":
         return new GoogleGenerativeAIEmbeddings({
           apiKey: this.config.get("GEMINI_API_KEY"),
-          model: "text-embedding-004",
+          model: this.config.get("GEMINI_EMBED_MODEL", "gemini-embedding-001"),
         });
 
       case "ollama":
@@ -60,12 +95,20 @@ export class EmbeddingService {
   }
 
   async embed(text: string): Promise<number[]> {
-    const embedding = await this.getEmbedder().embedQuery(text);
+    const embedding = await this.withTimeout(
+      this.currentProvider,
+      this.getEmbedder().embedQuery(text),
+      "Сервис эмбеддингов слишком долго отвечает. Проверьте выбранный AI-провайдер.",
+    );
     return this.normalizeDimensions(embedding);
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
-    const embeddings = await this.getEmbedder().embedDocuments(texts);
+    const embeddings = await this.withTimeout(
+      this.currentProvider,
+      this.getEmbedder().embedDocuments(texts),
+      "Пакетная векторизация слишком долго отвечает. Проверьте выбранный AI-провайдер.",
+    );
     return embeddings.map((embedding) => this.normalizeDimensions(embedding));
   }
 

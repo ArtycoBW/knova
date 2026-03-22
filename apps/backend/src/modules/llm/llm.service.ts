@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { ChatOpenAI } from "@langchain/openai";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { ChatOllama } from "@langchain/ollama";
+import { HarmBlockThreshold, HarmCategory } from "@google/generative-ai";
 import {
   HumanMessage,
   SystemMessage,
@@ -36,8 +37,33 @@ export class LlmService {
     this.logger.log(`LLM provider: ${this.currentProvider}`);
   }
 
+  private getDefaultTemperature() {
+    return this.currentProvider === "gemini" ? 0 : 0.7;
+  }
+
+  private getGeminiSafetySettings() {
+    return [
+      {
+        category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+      {
+        category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+        threshold: HarmBlockThreshold.BLOCK_NONE,
+      },
+    ];
+  }
+
   private createModel(options?: ChatOptions) {
-    const temperature = options?.temperature ?? 0.7;
+    const temperature = options?.temperature ?? this.getDefaultTemperature();
     const maxTokens = options?.maxTokens;
 
     switch (this.currentProvider) {
@@ -55,9 +81,11 @@ export class LlmService {
       case "gemini":
         return new ChatGoogleGenerativeAI({
           apiKey: this.config.get("GEMINI_API_KEY"),
-          model: this.config.get("GEMINI_MODEL", "gemini-2.0-flash"),
+          model: this.config.get("GEMINI_MODEL", "gemini-2.5-flash"),
           temperature,
+          topP: 0,
           maxOutputTokens: maxTokens,
+          safetySettings: this.getGeminiSafetySettings(),
         });
 
       case "ollama":
@@ -68,7 +96,39 @@ export class LlmService {
           ),
           model: this.config.get("OLLAMA_CHAT_MODEL", "llama3.2"),
           temperature,
+          checkOrPullModel: false,
         });
+    }
+  }
+
+  private getRequestTimeoutMs() {
+    switch (this.currentProvider) {
+      case "centrinvest":
+        return 30_000;
+      case "gemini":
+        return 18_000;
+      case "ollama":
+        return 10_000;
+    }
+  }
+
+  private async withTimeout<T>(promise: Promise<T>, message: string) {
+    const timeoutMs = this.getRequestTimeoutMs();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    try {
+      return await Promise.race<T>([
+        promise,
+        new Promise<T>((_, reject) => {
+          timer = setTimeout(() => {
+            reject(new Error(message));
+          }, timeoutMs);
+        }),
+      ]);
+    } finally {
+      if (timer) {
+        clearTimeout(timer);
+      }
     }
   }
 
@@ -94,7 +154,10 @@ export class LlmService {
 
   async complete(prompt: string, options?: ChatOptions): Promise<string> {
     const model = this.createModel(options);
-    const response = await model.invoke([new HumanMessage(prompt)]);
+    const response = await this.withTimeout(
+      model.invoke([new HumanMessage(prompt)]),
+      "AI-провайдер слишком долго отвечает на запрос.",
+    );
     return response.content as string;
   }
 
@@ -103,7 +166,10 @@ export class LlmService {
     options?: ChatOptions,
   ): Promise<string> {
     const model = this.createModel(options);
-    const response = await model.invoke(this.toMessages(messages));
+    const response = await this.withTimeout(
+      model.invoke(this.toMessages(messages)),
+      "AI-провайдер слишком долго отвечает на запрос.",
+    );
     return response.content as string;
   }
 
@@ -112,10 +178,26 @@ export class LlmService {
     options?: ChatOptions,
   ): AsyncIterable<string> {
     const model = this.createModel(options);
-    const stream = await model.stream(this.toMessages(messages));
-    for await (const chunk of stream) {
-      const text = chunk.content as string;
-      if (text) yield text;
+    const stream = await this.withTimeout(
+      model.stream(this.toMessages(messages)),
+      "AI-провайдер слишком долго начинает генерацию ответа.",
+    );
+    const iterator = stream[Symbol.asyncIterator]();
+
+    while (true) {
+      const nextChunk = await this.withTimeout(
+        iterator.next(),
+        "AI-провайдер слишком долго не присылает следующую часть ответа.",
+      );
+
+      if (nextChunk.done) {
+        break;
+      }
+
+      const text = nextChunk.value.content as string;
+      if (text) {
+        yield text;
+      }
     }
   }
 
@@ -132,7 +214,7 @@ export class LlmService {
       case "centrinvest":
         return this.config.get("CENTRINVEST_LLM_MODEL", "gpt-oss-20b");
       case "gemini":
-        return this.config.get("GEMINI_MODEL", "gemini-2.0-flash");
+        return this.config.get("GEMINI_MODEL", "gemini-2.5-flash");
       case "ollama":
         return this.config.get("OLLAMA_CHAT_MODEL", "llama3.2");
     }
