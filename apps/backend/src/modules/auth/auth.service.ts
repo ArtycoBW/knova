@@ -23,8 +23,9 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
+    const email = dto.email.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
     if (existing?.isVerified) {
       throw new ConflictException("Пользователь с таким email уже существует");
@@ -34,24 +35,25 @@ export class AuthService {
 
     const user = existing
       ? await this.prisma.user.update({
-          where: { email: dto.email },
+          where: { email },
           data: { password: hashedPassword },
         })
       : await this.prisma.user.create({
-          data: { email: dto.email, password: hashedPassword },
+          data: { email, password: hashedPassword },
         });
 
     const code = this.generateCode();
-    await this.saveVerificationCode(dto.email, code, CodeType.REGISTER, user.id);
+    await this.saveVerificationCode(email, code, CodeType.REGISTER, user.id);
 
     return { message: "Код подтверждения отправлен", verificationCode: code };
   }
 
   async registerVerify(dto: VerifyCodeDto) {
-    await this.validateCode(dto.email, dto.code, CodeType.REGISTER);
+    const email = dto.email.trim().toLowerCase();
+    await this.validateCode(email, dto.code, CodeType.REGISTER);
 
     const user = await this.prisma.user.findUniqueOrThrow({
-      where: { email: dto.email },
+      where: { email },
     });
 
     await this.prisma.user.update({
@@ -78,8 +80,9 @@ export class AuthService {
   }
 
   async login(dto: LoginDto) {
+    const email = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
     if (!user) {
       throw new UnauthorizedException("Неверный email или пароль");
@@ -91,13 +94,14 @@ export class AuthService {
     }
 
     const code = this.generateCode();
-    await this.saveVerificationCode(dto.email, code, CodeType.LOGIN, user.id);
+    await this.saveVerificationCode(email, code, CodeType.LOGIN, user.id);
 
     return { message: "Код подтверждения отправлен", verificationCode: code };
   }
 
   async loginVerify(dto: LoginVerifyDto) {
-    const record = await this.validateCode(dto.email, dto.code, CodeType.LOGIN);
+    const email = dto.email.trim().toLowerCase();
+    const record = await this.validateCode(email, dto.code, CodeType.LOGIN);
 
     const user = await this.prisma.user.findUnique({
       where: { id: record.userId! },
@@ -108,15 +112,16 @@ export class AuthService {
   }
 
   async resetPassword(dto: ResetPasswordDto) {
+    const email = dto.email.trim().toLowerCase();
     const user = await this.prisma.user.findUnique({
-      where: { email: dto.email },
+      where: { email },
     });
     if (!user) {
       return { message: "Если email зарегистрирован, код будет отправлен" };
     }
 
     const code = this.generateCode();
-    await this.saveVerificationCode(dto.email, code, CodeType.RESET_PASSWORD, user.id);
+    await this.saveVerificationCode(email, code, CodeType.RESET_PASSWORD, user.id);
 
     return {
       message: "Код подтверждения отправлен",
@@ -125,8 +130,9 @@ export class AuthService {
   }
 
   async resetPasswordConfirm(dto: ResetPasswordConfirmDto) {
+    const email = dto.email.trim().toLowerCase();
     const record = await this.validateCode(
-      dto.email,
+      email,
       dto.code,
       CodeType.RESET_PASSWORD,
     );
@@ -281,10 +287,33 @@ export class AuthService {
       lastName: user.lastName,
       organization: user.organization,
       role: user.role,
-      avatarUrl: user.avatarUrl,
+      avatarUrl: this.normalizeAvatarUrl(user.avatarUrl),
       xp: user.xp,
       level: user.level,
       onboardingDone: user.onboardingDone,
     };
+  }
+
+  private normalizeAvatarUrl(avatarUrl: string | null) {
+    if (!avatarUrl) {
+      return null;
+    }
+
+    try {
+      const url = new URL(avatarUrl);
+      if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+        const appUrl =
+          this.config.get<string>("APP_URL")?.trim() ??
+          this.config.get<string>("FRONTEND_URL")?.trim();
+
+        if (appUrl) {
+          return `${appUrl.replace(/\/+$/, "")}${url.pathname}`;
+        }
+      }
+
+      return avatarUrl;
+    } catch {
+      return avatarUrl;
+    }
   }
 }

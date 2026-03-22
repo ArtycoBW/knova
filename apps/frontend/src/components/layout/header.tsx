@@ -19,6 +19,7 @@ import {
   useLlmProviders,
   useSwitchLlmProvider,
 } from "@/hooks/use-settings";
+import { resolveAvatarUrl } from "@/lib/assets";
 import { cn } from "@/lib/utils";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -41,7 +42,7 @@ const PROVIDER_BADGE: Record<string, { className: string }> = {
 
 export function Header({ onMobileMenuToggle, title }: HeaderProps) {
   const { theme, setTheme } = useTheme();
-  const user = useAuthStore((s) => s.user);
+  const user = useAuthStore((state) => state.user);
   const [commandOpen, setCommandOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -52,6 +53,7 @@ export function Header({ onMobileMenuToggle, title }: HeaderProps) {
   const provider = currentProvider.data?.provider ?? "centrinvest";
   const providerBadge = PROVIDER_BADGE[provider] ?? PROVIDER_BADGE.centrinvest;
   const initials = user?.firstName?.[0] ?? user?.email?.[0]?.toUpperCase() ?? "?";
+  const avatarUrl = resolveAvatarUrl(user?.avatarUrl);
 
   useEffect(() => {
     setMounted(true);
@@ -60,7 +62,12 @@ export function Header({ onMobileMenuToggle, title }: HeaderProps) {
   return (
     <>
       <header className="flex h-16 items-center gap-4 border-b border-border bg-card/80 px-4 backdrop-blur-sm">
-        <Button variant="ghost" size="icon" className="md:hidden" onClick={onMobileMenuToggle}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          onClick={onMobileMenuToggle}
+        >
           <Menu className="h-5 w-5" />
         </Button>
 
@@ -136,9 +143,9 @@ export function Header({ onMobileMenuToggle, title }: HeaderProps) {
 
           <NotificationBell />
 
-          {user?.avatarUrl ? (
+          {avatarUrl ? (
             <img
-              src={user.avatarUrl}
+              src={avatarUrl}
               alt="Аватар"
               className="h-8 w-8 rounded-full object-cover ring-2 ring-primary/20"
             />

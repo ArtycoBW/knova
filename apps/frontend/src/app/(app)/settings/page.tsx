@@ -16,7 +16,13 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -35,9 +41,10 @@ import {
 } from "@/hooks/use-settings";
 import {
   useChangePassword,
-  useUploadAvatar,
   useUpdateProfile,
+  useUploadAvatar,
 } from "@/hooks/use-users";
+import { resolveAvatarUrl } from "@/lib/assets";
 
 const roles = [
   { value: "STUDENT", label: "Студент" },
@@ -83,6 +90,9 @@ export default function SettingsPage() {
     });
   }, [me]);
 
+  const avatarUrl = resolveAvatarUrl(me?.avatarUrl);
+  const activeProvider = currentProvider.data?.provider;
+
   const handleProfileSave = async () => {
     await updateProfile.mutateAsync({
       firstName: profile.firstName.trim() || undefined,
@@ -101,14 +111,13 @@ export default function SettingsPage() {
     });
   };
 
-  const activeProvider = currentProvider.data?.provider;
-
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-6">
       <div className="space-y-2">
         <h1 className="font-[Syne] text-3xl font-bold">Настройки</h1>
         <p className="text-sm text-muted-foreground">
-          Управляйте профилем, AI-провайдерами и установкой приложения на устройство.
+          Управляйте профилем, AI-провайдерами и установкой приложения на
+          устройство.
         </p>
       </div>
 
@@ -120,14 +129,15 @@ export default function SettingsPage() {
               Профиль пользователя
             </CardTitle>
             <CardDescription>
-              Обновите имя, роль, описание и аватар, которые отображаются в интерфейсе.
+              Обновите имя, роль, описание и аватар, которые отображаются в
+              интерфейсе.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="flex flex-wrap items-center gap-4">
-              {me?.avatarUrl ? (
+              {avatarUrl ? (
                 <img
-                  src={me.avatarUrl}
+                  src={avatarUrl}
                   alt="Аватар"
                   className="h-20 w-20 rounded-3xl border border-border object-cover"
                 />
@@ -181,7 +191,10 @@ export default function SettingsPage() {
                 <Input
                   value={profile.firstName}
                   onChange={(event) =>
-                    setProfile((current) => ({ ...current, firstName: event.target.value }))
+                    setProfile((current) => ({
+                      ...current,
+                      firstName: event.target.value,
+                    }))
                   }
                   placeholder="Иван"
                 />
@@ -191,7 +204,10 @@ export default function SettingsPage() {
                 <Input
                   value={profile.lastName}
                   onChange={(event) =>
-                    setProfile((current) => ({ ...current, lastName: event.target.value }))
+                    setProfile((current) => ({
+                      ...current,
+                      lastName: event.target.value,
+                    }))
                   }
                   placeholder="Иванов"
                 />
@@ -201,7 +217,10 @@ export default function SettingsPage() {
                 <Input
                   value={profile.organization}
                   onChange={(event) =>
-                    setProfile((current) => ({ ...current, organization: event.target.value }))
+                    setProfile((current) => ({
+                      ...current,
+                      organization: event.target.value,
+                    }))
                   }
                   placeholder="AgroPulse"
                 />
@@ -233,7 +252,10 @@ export default function SettingsPage() {
               <Textarea
                 value={profile.bio}
                 onChange={(event) =>
-                  setProfile((current) => ({ ...current, bio: event.target.value }))
+                  setProfile((current) => ({
+                    ...current,
+                    bio: event.target.value,
+                  }))
                 }
                 placeholder="Коротко опишите ваш профиль и сценарии работы в Knova."
                 className="min-h-28 resize-none"
@@ -317,7 +339,8 @@ export default function SettingsPage() {
                 AI-провайдер
               </CardTitle>
               <CardDescription>
-                Выбирайте активную модель для чатов, аналитики и генерации материалов.
+                Выбирайте активную модель для чатов, аналитики и генерации
+                материалов.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -331,8 +354,9 @@ export default function SettingsPage() {
                   <div className="flex flex-wrap items-center gap-3">
                     <Badge className="gap-1 border-primary/20 bg-primary/10 text-primary">
                       <Sparkles className="h-3.5 w-3.5" />
-                      {providers.data?.find((item) => item.id === currentProvider.data?.provider)
-                        ?.name ?? currentProvider.data.provider}
+                      {providers.data?.find(
+                        (item) => item.id === currentProvider.data?.provider,
+                      )?.name ?? currentProvider.data.provider}
                     </Badge>
                     <span className="text-sm text-muted-foreground">
                       Модель: {currentProvider.data.model}
@@ -357,7 +381,9 @@ export default function SettingsPage() {
                       <CardHeader>
                         <CardTitle className="flex items-center justify-between text-lg">
                           <span>{provider.name}</span>
-                          {active ? <CheckCircle2 className="h-5 w-5 text-primary" /> : null}
+                          {active ? (
+                            <CheckCircle2 className="h-5 w-5 text-primary" />
+                          ) : null}
                         </CardTitle>
                         <CardDescription>{provider.description}</CardDescription>
                       </CardHeader>
@@ -371,7 +397,8 @@ export default function SettingsPage() {
                           </Badge>
                         </div>
                         <p className="text-xs leading-5 text-muted-foreground">
-                          {provider.reason ?? "Провайдер готов к переключению и использованию."}
+                          {provider.reason ??
+                            "Провайдер готов к переключению и использованию."}
                         </p>
                         <Button
                           className="w-full"
@@ -396,7 +423,8 @@ export default function SettingsPage() {
                 Приложение и PWA
               </CardTitle>
               <CardDescription>
-                Установите Knova как приложение и продолжайте работу даже при нестабильной сети.
+                Установите Knova как приложение и продолжайте работу даже при
+                нестабильной сети.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -414,7 +442,9 @@ export default function SettingsPage() {
                 onClick={() => void pwa.install()}
               >
                 <Download className="mr-2 h-4 w-4" />
-                {pwa.isInstalled ? "Приложение уже установлено" : "Установить Knova"}
+                {pwa.isInstalled
+                  ? "Приложение уже установлено"
+                  : "Установить Knova"}
               </Button>
             </CardContent>
           </Card>

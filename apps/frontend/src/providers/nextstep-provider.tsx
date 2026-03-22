@@ -18,8 +18,8 @@ import { useCompleteOnboarding } from "@/hooks/use-users";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useAuthStore } from "@/store/auth.store";
 
-const TOUR_SESSION_KEY = "knova_onboarding_session_v3";
-const TOUR_PENDING_KEY = "knova_pending_tour_v2";
+const TOUR_SESSION_KEY = "knova_onboarding_session_v4";
+const TOUR_PENDING_KEY = "knova_pending_tour_v3";
 
 type OnboardingContextValue = {
   startBestTour: () => void;
@@ -233,9 +233,27 @@ function NextStepShell({ children }: { children: React.ReactNode }) {
     ];
   }, [firstWorkspaceId]);
 
+  const getPreferredTour = useCallback(() => {
+    if (pathname.startsWith("/workspace/")) {
+      return "workspace-onboarding";
+    }
+
+    if (pathname === "/dashboard") {
+      return firstWorkspaceId
+        ? "dashboard-onboarding"
+        : "dashboard-onboarding-empty";
+    }
+
+    return firstWorkspaceId
+      ? "dashboard-onboarding"
+      : "dashboard-onboarding-empty";
+  }, [firstWorkspaceId, pathname]);
+
   const startBestTour = useCallback(() => {
+    const nextTour = getPreferredTour();
+
     if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(TOUR_SESSION_KEY, "1");
+      window.sessionStorage.setItem(TOUR_SESSION_KEY, nextTour);
     }
 
     if (pathname.startsWith("/workspace/")) {
@@ -249,13 +267,10 @@ function NextStepShell({ children }: { children: React.ReactNode }) {
     }
 
     if (typeof window !== "undefined") {
-      window.sessionStorage.setItem(
-        TOUR_PENDING_KEY,
-        firstWorkspaceId ? "dashboard-onboarding" : "dashboard-onboarding-empty",
-      );
+      window.sessionStorage.setItem(TOUR_PENDING_KEY, nextTour);
     }
     router.push("/dashboard");
-  }, [firstWorkspaceId, pathname, router, startNextStep]);
+  }, [getPreferredTour, pathname, router, startNextStep]);
 
   useEffect(() => {
     if (!user || user.onboardingDone) {
@@ -266,17 +281,19 @@ function NextStepShell({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const shouldAutoStart = pathname === "/dashboard" || pathname.startsWith("/workspace/");
+    const shouldAutoStart =
+      pathname === "/dashboard" || pathname.startsWith("/workspace/");
     if (!shouldAutoStart) {
       return;
     }
 
-    if (window.sessionStorage.getItem(TOUR_SESSION_KEY) === "1") {
+    const desiredTour = getPreferredTour();
+    if (window.sessionStorage.getItem(TOUR_SESSION_KEY) === desiredTour) {
       return;
     }
 
     startBestTour();
-  }, [pathname, startBestTour, user]);
+  }, [getPreferredTour, pathname, startBestTour, user]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -307,7 +324,11 @@ function NextStepShell({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timeout);
   }, [pathname, startNextStep]);
 
-  const handleComplete = useCallback(() => {
+  const handleComplete = useCallback((tourName: string | null) => {
+    if (tourName === "dashboard-onboarding-empty") {
+      return;
+    }
+
     if (!user || user.onboardingDone || completeOnboarding.isPending) {
       return;
     }

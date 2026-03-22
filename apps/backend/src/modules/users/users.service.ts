@@ -45,7 +45,7 @@ export class UsersService {
       }
     }
 
-    const avatarUrl = `${this.getPublicApiUrl()}/uploads/avatars/${filename}`;
+    const avatarUrl = `${this.getPublicBaseUrl()}/uploads/avatars/${filename}`;
     await this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },
@@ -172,7 +172,7 @@ export class UsersService {
       lastName: user.lastName,
       organization: user.organization,
       role: user.role,
-      avatarUrl: user.avatarUrl,
+      avatarUrl: this.normalizeAvatarUrl(user.avatarUrl),
       bio: user.bio,
       xp: user.xp,
       level: user.level,
@@ -180,11 +180,18 @@ export class UsersService {
     };
   }
 
-  private getPublicApiUrl() {
-    return (
-      this.config.get<string>("PUBLIC_API_URL") ??
-      `http://localhost:${this.config.get<string>("PORT", "3001")}`
-    );
+  private getPublicBaseUrl() {
+    const appUrl = this.config.get<string>("APP_URL")?.trim();
+    if (appUrl) {
+      return appUrl.replace(/\/+$/, "");
+    }
+
+    const publicApiUrl = this.config.get<string>("PUBLIC_API_URL")?.trim();
+    if (publicApiUrl) {
+      return publicApiUrl.replace(/\/api\/?$/, "").replace(/\/+$/, "");
+    }
+
+    return `http://localhost:${this.config.get<string>("PORT", "3001")}`;
   }
 
   private resolveAvatarPath(avatarUrl: string) {
@@ -197,6 +204,23 @@ export class UsersService {
       );
     } catch {
       return null;
+    }
+  }
+
+  private normalizeAvatarUrl(avatarUrl: string | null) {
+    if (!avatarUrl) {
+      return null;
+    }
+
+    try {
+      const url = new URL(avatarUrl);
+      if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+        return `${this.getPublicBaseUrl()}${url.pathname}`;
+      }
+
+      return avatarUrl;
+    } catch {
+      return avatarUrl;
     }
   }
 }
