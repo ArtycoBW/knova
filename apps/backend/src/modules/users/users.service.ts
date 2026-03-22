@@ -108,7 +108,14 @@ export class UsersService {
       });
     }
 
-    return { xp: user.xp, badge };
+    return { user: this.sanitize(user), badge };
+  }
+
+  async getBadges(userId: string) {
+    return this.prisma.badge.findMany({
+      where: { userId },
+      orderBy: { earnedAt: "desc" },
+    });
   }
 
   async getNotifications(userId: string) {

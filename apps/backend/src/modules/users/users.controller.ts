@@ -97,6 +97,12 @@ export class UsersController {
     return this.usersService.getNotifications(req.user.id);
   }
 
+  @Get("badges")
+  @ApiOperation({ summary: "РЎРїРёСЃРѕРє Р±РµР№РґР¶РµР№" })
+  getBadges(@Req() req: AuthenticatedRequest) {
+    return this.usersService.getBadges(req.user.id);
+  }
+
   @Post("notifications/:id/read")
   @ApiOperation({ summary: "Отметить уведомление прочитанным" })
   markNotificationRead(
