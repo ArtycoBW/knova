@@ -68,9 +68,92 @@ services:
       MAX_FILE_SIZE: ${MAX_FILE_SIZE}
       BULL_BOARD_USERNAME: ${BULL_BOARD_USERNAME}
       BULL_BOARD_PASSWORD: ${BULL_BOARD_PASSWORD}
-      ML_SERVICE_URL: ${ML_SERVICE_URL}
+      ML_SERVICE_URL: http://ml-api:8000
     volumes:
       - uploads_data:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+      ml-api:
+        condition: service_started
+    restart: unless-stopped
+
+  ml-api:
+    build:
+      context: .
+      dockerfile: ./apps/ml/Dockerfile
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL}
+      GEMINI_EMBED_MODEL: ${GEMINI_EMBED_MODEL}
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL}
+      CENTRINVEST_API_KEY: ${CENTRINVEST_API_KEY}
+      CENTRINVEST_LLM_URL: ${CENTRINVEST_LLM_URL}
+      CENTRINVEST_LLM_MODEL: ${CENTRINVEST_LLM_MODEL}
+      CENTRINVEST_EMBED_MODEL: ${CENTRINVEST_EMBED_MODEL}
+      CENTRINVEST_EMBEDDING_URL: ${CENTRINVEST_EMBEDDING_URL}
+      CENTRINVEST_STT_URL: ${CENTRINVEST_STT_URL}
+      CENTRINVEST_STT_MODEL: ${CENTRINVEST_STT_MODEL}
+      AI_SERVICE_BEARER_TOKEN: ${AI_SERVICE_BEARER_TOKEN}
+      AI_SERVICE_DISABLE_AUTH: ${AI_SERVICE_DISABLE_AUTH}
+      AI_SERVICE_INLINE_ASYNC_JOBS: "false"
+      AI_SERVICE_DB_SCHEMA: ml
+      AI_SERVICE_ARTIFACT_ROOT: /app/data
+      AI_SERVICE_TEMPLATE_DIR: /app/apps/ml/templates
+    volumes:
+      - ml_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+    restart: unless-stopped
+
+  ml-worker:
+    build:
+      context: .
+      dockerfile: ./apps/ml/Dockerfile
+    command: ["arq", "ml_service.workers.settings.WorkerSettings"]
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_MODEL: ${GEMINI_MODEL}
+      GEMINI_EMBED_MODEL: ${GEMINI_EMBED_MODEL}
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_CHAT_MODEL: ${OLLAMA_CHAT_MODEL}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL}
+      CENTRINVEST_API_KEY: ${CENTRINVEST_API_KEY}
+      CENTRINVEST_LLM_URL: ${CENTRINVEST_LLM_URL}
+      CENTRINVEST_LLM_MODEL: ${CENTRINVEST_LLM_MODEL}
+      CENTRINVEST_EMBED_MODEL: ${CENTRINVEST_EMBED_MODEL}
+      CENTRINVEST_EMBEDDING_URL: ${CENTRINVEST_EMBEDDING_URL}
+      CENTRINVEST_STT_URL: ${CENTRINVEST_STT_URL}
+      CENTRINVEST_STT_MODEL: ${CENTRINVEST_STT_MODEL}
+      AI_SERVICE_BEARER_TOKEN: ${AI_SERVICE_BEARER_TOKEN}
+      AI_SERVICE_DISABLE_AUTH: ${AI_SERVICE_DISABLE_AUTH}
+      AI_SERVICE_INLINE_ASYNC_JOBS: "false"
+      AI_SERVICE_DB_SCHEMA: ml
+      AI_SERVICE_ARTIFACT_ROOT: /app/data
+      AI_SERVICE_TEMPLATE_DIR: /app/apps/ml/templates
+    volumes:
+      - ml_data:/app/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -107,6 +190,7 @@ services:
     depends_on:
       - frontend
       - backend
+      - ml-api
     restart: unless-stopped
 
 volumes:
@@ -114,5 +198,6 @@ volumes:
   redis_data:
   ollama_data:
   uploads_data:
+  ml_data:
   caddy_data:
   caddy_config:

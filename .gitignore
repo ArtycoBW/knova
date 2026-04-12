@@ -49,6 +49,8 @@ venv/
 
 # ML models
 apps/ml/models/
+apps/ml/data/
+apps/ml/app.db
 *.onnx
 *.bin
 *.safetensors

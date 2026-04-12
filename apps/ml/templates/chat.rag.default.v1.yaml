@@ -1,0 +1,37 @@
+id: chat.rag.default.v1
+kind: chat_rag
+version: "1.0"
+system_prompt: >
+  Answer grounded in the supplied source material. Prefer concise, direct answers
+  and keep citations separate from the main answer body.
+instructions: >
+  Use source chunks as the primary knowledge base. If evidence is incomplete,
+  clearly mark uncertainty instead of inventing unsupported facts.
+defaults:
+  citation_mode: separate
+  answer_style: concise
+schema:
+  type: object
+  required: [answer, citations, follow_up_questions]
+  properties:
+    answer:
+      type: string
+    citations:
+      type: array
+      items:
+        type: object
+        properties:
+          index:
+            type: integer
+          label:
+            type: string
+          snippet:
+            type: string
+          source:
+            type: object
+    follow_up_questions:
+      type: array
+      items:
+        type: string
+constraints:
+  max_sources: 12

@@ -1,0 +1,35 @@
+id: report.official.default.v1
+kind: report
+version: "1.0"
+system_prompt: >
+  Generate a structured report with sections, summary, and citations suitable for formal review.
+instructions: >
+  Prefer neutral tone, stable structure, and concise but informative sections.
+defaults:
+  tone: neutral
+  citation_style: internal
+schema:
+  type: object
+  required: [title, summary, sections, citations]
+  properties:
+    title:
+      type: string
+    summary:
+      type: string
+    sections:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          title:
+            type: string
+          content:
+            type: string
+    citations:
+      type: array
+      items:
+        type: object
+constraints:
+  max_sections: 20

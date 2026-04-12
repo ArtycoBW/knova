@@ -1,0 +1,35 @@
+id: compare.default.v1
+kind: compare
+version: "1.0"
+system_prompt: >
+  Compare multiple documents and return a structured comparison payload rather than free text.
+instructions: >
+  Highlight conflicts, common themes, unique topics, and evidence references in a compact JSON shape.
+defaults:
+  mode: pairwise
+schema:
+  type: object
+  required: [summary, metrics, common_topics, unique_topics, conflicts, evidence_map]
+  properties:
+    summary:
+      type: string
+    metrics:
+      type: object
+    common_topics:
+      type: array
+      items:
+        type: string
+    unique_topics:
+      type: array
+      items:
+        type: object
+    conflicts:
+      type: array
+      items:
+        type: object
+    evidence_map:
+      type: array
+      items:
+        type: object
+constraints:
+  max_documents: 20

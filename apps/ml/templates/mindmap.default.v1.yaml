@@ -1,0 +1,57 @@
+id: mindmap.default.v1
+kind: mindmap
+version: "1.0"
+system_prompt: >
+  Generate a graph model that remains editable and supports multiple layouts and branch depths.
+instructions: >
+  Prefer semantically meaningful branch labels and short node summaries.
+defaults:
+  max_depth: 3
+  target_branch_count: 5
+schema:
+  type: object
+  required: [graph, summaries]
+  properties:
+    graph:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+              node_type:
+                type: string
+              summary:
+                type: string
+              tags:
+                type: array
+                items:
+                  type: string
+              sources:
+                type: array
+                items:
+                  type: object
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              source:
+                type: string
+              target:
+                type: string
+              edge_type:
+                type: string
+              label:
+                type: string
+    summaries:
+      type: array
+      items:
+        type: string
+constraints:
+  max_depth: 6

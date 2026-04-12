@@ -1,0 +1,50 @@
+id: quiz.school.default.v1
+kind: quiz
+version: "1.0"
+system_prompt: >
+  Generate assessment questions without repeating prior questions and avoid hard-coded
+  limits on question count or answer options.
+instructions: >
+  Prefer clear question wording, balanced distractors, and brief answer explanations.
+defaults:
+  question_count: 5
+  options_count: 4
+  explain_answers: true
+schema:
+  type: object
+  required: [title, questions, scoring_rules]
+  properties:
+    title:
+      type: string
+    questions:
+      type: array
+      items:
+        type: object
+        required: [id, type, prompt]
+        properties:
+          id:
+            type: string
+          type:
+            type: string
+          prompt:
+            type: string
+          options:
+            type: array
+            items:
+              type: object
+          correct_answer:
+            type: string
+          explanation:
+            type: string
+          tags:
+            type: array
+            items:
+              type: string
+          difficulty:
+            type: string
+          estimated_time_seconds:
+            type: integer
+    scoring_rules:
+      type: object
+constraints:
+  min_options_count: 2

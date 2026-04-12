@@ -1,0 +1,2632 @@
+openapi: 3.0.3
+info:
+  title: Knova AI Service API
+  version: 1.0.0-draft
+  description: |
+    Contract for the standalone Python AI service.
+    Covers compatibility endpoints, native AI tasks, editable projects,
+    jobs, artifacts, templates, and media rendering workflows.
+servers:
+  - url: https://ai-service.internal
+    description: Internal AI service
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: Catalog
+  - name: Compatibility
+  - name: Tasks
+  - name: Projects
+  - name: Jobs
+  - name: Artifacts
+  - name: Templates
+paths:
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      operationId: getLiveHealth
+      security: []
+      responses:
+        '200':
+          description: Service is alive
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      operationId: getReadyHealth
+      security: []
+      responses:
+        '200':
+          description: Service is ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+        '503':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/providers:
+    get:
+      tags: [Catalog]
+      summary: List configured providers
+      operationId: listProviders
+      responses:
+        '200':
+          description: Providers catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderListResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/models:
+    get:
+      tags: [Catalog, Compatibility]
+      summary: List available model aliases and capabilities
+      operationId: listModels
+      responses:
+        '200':
+          description: Models catalog
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelListResponse'
+        '401':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/chat/completions:
+    post:
+      tags: [Compatibility]
+      summary: OpenAI-style chat completions endpoint
+      operationId: createChatCompletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatCompletionRequest'
+      responses:
+        '200':
+          description: Completion generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatCompletionResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/embeddings:
+    post:
+      tags: [Compatibility]
+      summary: OpenAI-style embeddings endpoint
+      operationId: createEmbeddings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmbeddingsRequest'
+      responses:
+        '200':
+          description: Embeddings created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EmbeddingsResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/audio/transcriptions:
+    post:
+      tags: [Compatibility]
+      summary: Transcribe audio or extract speech from video
+      operationId: createTranscription
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TranscriptionMultipartRequest'
+      responses:
+        '200':
+          description: Transcription result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TranscriptionResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/audio/speech:
+    post:
+      tags: [Compatibility]
+      summary: Synthesize speech and return artifact references
+      operationId: createSpeechSynthesis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SpeechSynthesisRequest'
+      responses:
+        '200':
+          description: Speech generated synchronously
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SpeechSynthesisResponse'
+        '202':
+          description: Speech generation accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/tasks/chat-rag:
+    post:
+      tags: [Tasks]
+      summary: Generate grounded chat answer from history and source chunks
+      operationId: runChatRagTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChatRagRequest'
+      responses:
+        '200':
+          description: Chat answer generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChatRagResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/tasks/compare:
+    post:
+      tags: [Tasks]
+      summary: Compare two or more documents
+      operationId: runCompareTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompareRequest'
+      responses:
+        '200':
+          description: Comparison result generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CompareResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/tasks/mindmap:
+    post:
+      tags: [Tasks]
+      summary: Generate editable mindmap graph
+      operationId: runMindmapTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MindmapRequest'
+      responses:
+        '200':
+          description: Mindmap generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MindmapResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/tasks/quiz:
+    post:
+      tags: [Tasks]
+      summary: Generate quiz without fixed question limits
+      operationId: runQuizTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QuizRequest'
+      responses:
+        '200':
+          description: Quiz generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuizResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/tasks/table:
+    post:
+      tags: [Tasks]
+      summary: Extract structured table from arbitrary sources
+      operationId: runTableTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableRequest'
+      responses:
+        '200':
+          description: Table generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TableResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/tasks/infographic:
+    post:
+      tags: [Tasks]
+      summary: Generate infographic specification and optional renders
+      operationId: runInfographicTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InfographicRequest'
+      responses:
+        '200':
+          description: Infographic generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InfographicResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/tasks/report:
+    post:
+      tags: [Tasks]
+      summary: Generate report from template and sources
+      operationId: runReportTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+      responses:
+        '200':
+          description: Report generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/tasks/presentation:
+    post:
+      tags: [Tasks]
+      summary: Create editable presentation project
+      operationId: runPresentationTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PresentationTaskRequest'
+      responses:
+        '200':
+          description: Presentation project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresentationTaskResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/tasks/podcast:
+    post:
+      tags: [Tasks]
+      summary: Create editable podcast project with TTS pipeline
+      operationId: runPodcastTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PodcastTaskRequest'
+      responses:
+        '200':
+          description: Podcast project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodcastTaskResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/tasks/video:
+    post:
+      tags: [Tasks]
+      summary: Create editable video project or rendering job
+      operationId: runVideoTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VideoTaskRequest'
+      responses:
+        '200':
+          description: Video project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoTaskResponse'
+        '202':
+          description: Task accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/projects:
+    get:
+      tags: [Projects]
+      summary: List AI projects
+      operationId: listProjects
+      parameters:
+        - in: query
+          name: project_type
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 50
+      responses:
+        '200':
+          description: Project list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectListResponse'
+    post:
+      tags: [Projects]
+      summary: Create empty or seeded AI project
+      operationId: createProject
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectCreateRequest'
+      responses:
+        '200':
+          description: Project created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEnvelope'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/projects/{project_id}:
+    get:
+      tags: [Projects]
+      summary: Get project by id
+      operationId: getProject
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Project found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEnvelope'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+    patch:
+      tags: [Projects]
+      summary: Patch project metadata, settings, or content
+      operationId: patchProject
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProjectPatchRequest'
+      responses:
+        '200':
+          description: Project updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectEnvelope'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+    delete:
+      tags: [Projects]
+      summary: Archive or delete project
+      operationId: deleteProject
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '204':
+          description: Project deleted
+  /v1/projects/{project_id}/export:
+    post:
+      tags: [Projects]
+      summary: Export project into one or more artifacts
+      operationId: exportProject
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+      responses:
+        '200':
+          description: Export completed synchronously
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportResponse'
+        '202':
+          description: Export accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/projects/{project_id}/slides:
+    post:
+      tags: [Projects]
+      summary: Add slide to presentation project
+      operationId: addSlide
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddSlideRequest'
+      responses:
+        '200':
+          description: Slide added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresentationProject'
+        '400':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/projects/{project_id}/slides/{slide_id}:
+    patch:
+      tags: [Projects]
+      summary: Update slide in presentation project
+      operationId: updateSlide
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/SlideId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSlideRequest'
+      responses:
+        '200':
+          description: Slide updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresentationProject'
+    delete:
+      tags: [Projects]
+      summary: Delete slide from presentation project
+      operationId: deleteSlide
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/SlideId'
+      responses:
+        '204':
+          description: Slide deleted
+  /v1/projects/{project_id}/slides/{slide_id}/regenerate:
+    post:
+      tags: [Projects]
+      summary: Regenerate one slide or selected fields only
+      operationId: regenerateSlide
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/SlideId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegenerateSlideRequest'
+      responses:
+        '200':
+          description: Slide regenerated synchronously
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresentationProject'
+        '202':
+          description: Regeneration accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/projects/{project_id}/segments/{segment_id}:
+    patch:
+      tags: [Projects]
+      summary: Update podcast segment
+      operationId: updateSegment
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/SegmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSegmentRequest'
+      responses:
+        '200':
+          description: Segment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodcastProject'
+  /v1/projects/{project_id}/segments/{segment_id}/rerender:
+    post:
+      tags: [Projects]
+      summary: Re-render only one podcast segment
+      operationId: rerenderSegment
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/SegmentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RerenderSegmentRequest'
+      responses:
+        '202':
+          description: Segment render accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/projects/{project_id}/scenes/{scene_id}:
+    patch:
+      tags: [Projects]
+      summary: Update video scene
+      operationId: updateScene
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/SceneId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSceneRequest'
+      responses:
+        '200':
+          description: Scene updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoProject'
+  /v1/projects/{project_id}/scenes/{scene_id}/rerender:
+    post:
+      tags: [Projects]
+      summary: Re-render only one video scene
+      operationId: rerenderScene
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+        - $ref: '#/components/parameters/SceneId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RerenderSceneRequest'
+      responses:
+        '202':
+          description: Scene render accepted as async job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAcceptedResponse'
+  /v1/jobs:
+    get:
+      tags: [Jobs]
+      summary: List jobs
+      operationId: listJobs
+      parameters:
+        - in: query
+          name: type
+          schema:
+            type: string
+        - in: query
+          name: status
+          schema:
+            type: string
+        - in: query
+          name: project_id
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 50
+      responses:
+        '200':
+          description: Job list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobListResponse'
+  /v1/jobs/{job_id}:
+    get:
+      tags: [Jobs]
+      summary: Get job by id
+      operationId: getJob
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/jobs/{job_id}/cancel:
+    post:
+      tags: [Jobs]
+      summary: Cancel running or queued job
+      operationId: cancelJob
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      responses:
+        '200':
+          description: Job updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
+  /v1/artifacts:
+    get:
+      tags: [Artifacts]
+      summary: List generated artifacts
+      operationId: listArtifacts
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+        - in: query
+          name: project_id
+          schema:
+            type: string
+        - in: query
+          name: cursor
+          schema:
+            type: string
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+            default: 50
+      responses:
+        '200':
+          description: Artifact list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ArtifactListResponse'
+  /v1/artifacts/{artifact_id}:
+    get:
+      tags: [Artifacts]
+      summary: Get artifact metadata
+      operationId: getArtifact
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      responses:
+        '200':
+          description: Artifact found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Artifact'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+  /v1/artifacts/{artifact_id}/download:
+    get:
+      tags: [Artifacts]
+      summary: Download artifact content
+      operationId: downloadArtifact
+      parameters:
+        - $ref: '#/components/parameters/ArtifactId'
+      responses:
+        '200':
+          description: Artifact binary stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+  /v1/templates:
+    get:
+      tags: [Templates]
+      summary: List prompt and output templates
+      operationId: listTemplates
+      parameters:
+        - in: query
+          name: kind
+          schema:
+            type: string
+        - in: query
+          name: version
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Template list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateListResponse'
+  /v1/templates/{template_id}:
+    get:
+      tags: [Templates]
+      summary: Get template by id
+      operationId: getTemplate
+      parameters:
+        - $ref: '#/components/parameters/TemplateId'
+      responses:
+        '200':
+          description: Template found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Template'
+        '404':
+          $ref: '#/components/responses/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ProjectId:
+      in: path
+      name: project_id
+      required: true
+      schema:
+        type: string
+    SlideId:
+      in: path
+      name: slide_id
+      required: true
+      schema:
+        type: string
+    SegmentId:
+      in: path
+      name: segment_id
+      required: true
+      schema:
+        type: string
+    SceneId:
+      in: path
+      name: scene_id
+      required: true
+      schema:
+        type: string
+    JobId:
+      in: path
+      name: job_id
+      required: true
+      schema:
+        type: string
+    ArtifactId:
+      in: path
+      name: artifact_id
+      required: true
+      schema:
+        type: string
+    TemplateId:
+      in: path
+      name: template_id
+      required: true
+      schema:
+        type: string
+  responses:
+    ErrorResponse:
+      description: Error response
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        request_id:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+    HealthResponse:
+      type: object
+      required: [status, timestamp]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        timestamp:
+          type: string
+          format: date-time
+    ReadinessResponse:
+      type: object
+      required: [status, timestamp, checks]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        timestamp:
+          type: string
+          format: date-time
+        checks:
+          type: array
+          items:
+            type: object
+            required: [name, status]
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+                enum: [ok, degraded, failed]
+              details:
+                type: object
+                additionalProperties: true
+    ProviderListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProviderDescriptor'
+    ProviderDescriptor:
+      type: object
+      required: [id, kind, enabled, capabilities]
+      properties:
+        id:
+          type: string
+          example: gemini
+        kind:
+          type: string
+          enum: [text, embeddings, stt, tts, render, video, image]
+        enabled:
+          type: boolean
+        routing_group:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        default_model_aliases:
+          type: object
+          additionalProperties:
+            type: string
+    ModelListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelDescriptor'
+    ModelDescriptor:
+      type: object
+      required: [id, alias, provider, modality, capabilities]
+      properties:
+        id:
+          type: string
+          example: gemini-2.5-flash
+        alias:
+          type: string
+          example: text-default
+        provider:
+          type: string
+          example: gemini
+        modality:
+          type: string
+          enum: [text, embeddings, audio, video, multimodal]
+        capabilities:
+          type: array
+          items:
+            type: string
+        recommended_for:
+          type: array
+          items:
+            type: string
+        context_window:
+          type: integer
+        max_output_tokens:
+          type: integer
+        dimensions:
+          type: integer
+          nullable: true
+    ExecutionOptions:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: [sync, async, auto]
+          default: auto
+        priority:
+          type: string
+          enum: [low, normal, high]
+          default: normal
+        idempotency_key:
+          type: string
+        webhook_url:
+          type: string
+          format: uri
+        callback_headers:
+          type: object
+          additionalProperties:
+            type: string
+    GenerationOptions:
+      type: object
+      properties:
+        provider:
+          type: string
+          example: auto
+        model:
+          type: string
+          example: text-default
+        temperature:
+          type: number
+          minimum: 0
+        top_p:
+          type: number
+          minimum: 0
+          maximum: 1
+        max_output_tokens:
+          type: integer
+          minimum: 1
+        seed:
+          type: integer
+        stop:
+          type: array
+          items:
+            type: string
+        repair_structured_output:
+          type: boolean
+          default: true
+    SourceInput:
+      type: object
+      properties:
+        artifact_id:
+          type: string
+        document_id:
+          type: string
+        title:
+          type: string
+        mime_type:
+          type: string
+        text:
+          type: string
+        url:
+          type: string
+          format: uri
+        chunk_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    SourceRef:
+      type: object
+      properties:
+        artifact_id:
+          type: string
+        document_id:
+          type: string
+        chunk_id:
+          type: string
+        title:
+          type: string
+    Citation:
+      type: object
+      properties:
+        index:
+          type: integer
+        label:
+          type: string
+        snippet:
+          type: string
+        source:
+          $ref: '#/components/schemas/SourceRef'
+    Usage:
+      type: object
+      properties:
+        prompt_tokens:
+          type: integer
+        completion_tokens:
+          type: integer
+        total_tokens:
+          type: integer
+    Artifact:
+      type: object
+      required: [id, kind, mime_type, created_at]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        mime_type:
+          type: string
+        size:
+          type: integer
+        checksum:
+          type: string
+        storage_uri:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        project_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    Job:
+      type: object
+      required: [id, type, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed, cancelled]
+        progress:
+          type: number
+          minimum: 0
+          maximum: 100
+        request_id:
+          type: string
+        project_id:
+          type: string
+        provider:
+          type: string
+        model:
+          type: string
+        input_ref:
+          type: object
+          additionalProperties: true
+        result_ref:
+          type: object
+          additionalProperties: true
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        error:
+          $ref: '#/components/schemas/Error'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    JobAcceptedResponse:
+      type: object
+      required: [job]
+      properties:
+        job:
+          $ref: '#/components/schemas/Job'
+    ChatMessage:
+      type: object
+      required: [role, content]
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant, tool]
+        content:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+                additionalProperties: true
+        name:
+          type: string
+        tool_call_id:
+          type: string
+    ResponseFormat:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [text, json_schema]
+        json_schema:
+          type: object
+          additionalProperties: true
+    ChatCompletionRequest:
+      type: object
+      required: [messages]
+      properties:
+        model:
+          type: string
+          default: text-default
+        provider:
+          type: string
+          default: auto
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        temperature:
+          type: number
+          minimum: 0
+        top_p:
+          type: number
+          minimum: 0
+          maximum: 1
+        max_tokens:
+          type: integer
+          minimum: 1
+        stream:
+          type: boolean
+          default: false
+        response_format:
+          $ref: '#/components/schemas/ResponseFormat'
+        metadata:
+          type: object
+          additionalProperties: true
+    ChatCompletionResponse:
+      type: object
+      required: [id, object, created, model, choices]
+      properties:
+        id:
+          type: string
+        object:
+          type: string
+          enum: [chat.completion]
+        created:
+          type: integer
+        model:
+          type: string
+        provider:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            required: [index, message, finish_reason]
+            properties:
+              index:
+                type: integer
+              message:
+                $ref: '#/components/schemas/ChatMessage'
+              finish_reason:
+                type: string
+        usage:
+          $ref: '#/components/schemas/Usage'
+    EmbeddingsRequest:
+      type: object
+      required: [input]
+      properties:
+        model:
+          type: string
+          default: embedding-default
+        provider:
+          type: string
+          default: auto
+        input:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        dimensions:
+          type: integer
+          minimum: 1
+        task_type:
+          type: string
+          enum:
+            - retrieval_query
+            - retrieval_document
+            - semantic_similarity
+            - classification
+            - clustering
+        encoding_format:
+          type: string
+          enum: [float]
+          default: float
+    EmbeddingsResponse:
+      type: object
+      required: [object, data, model]
+      properties:
+        object:
+          type: string
+          enum: [list]
+        data:
+          type: array
+          items:
+            type: object
+            required: [object, index, embedding]
+            properties:
+              object:
+                type: string
+                enum: [embedding]
+              index:
+                type: integer
+              embedding:
+                type: array
+                items:
+                  type: number
+        model:
+          type: string
+        provider:
+          type: string
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+            total_tokens:
+              type: integer
+    TranscriptionMultipartRequest:
+      type: object
+      required: [file]
+      properties:
+        file:
+          type: string
+          format: binary
+        model:
+          type: string
+          default: stt-default
+        provider:
+          type: string
+          default: auto
+        language:
+          type: string
+        prompt:
+          type: string
+        response_format:
+          type: string
+          enum: [json, text, srt, verbose_json]
+          default: verbose_json
+        timestamp_granularities:
+          type: array
+          items:
+            type: string
+            enum: [segment, word]
+        diarization:
+          type: boolean
+          default: false
+        speaker_count_hint:
+          type: integer
+          minimum: 1
+    TranscriptionResponse:
+      type: object
+      required: [text]
+      properties:
+        text:
+          type: string
+        language:
+          type: string
+        duration_ms:
+          type: integer
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/TranscriptionSegment'
+    TranscriptionSegment:
+      type: object
+      properties:
+        id:
+          type: string
+        start_ms:
+          type: integer
+        end_ms:
+          type: integer
+        speaker:
+          type: string
+        text:
+          type: string
+    VoiceSelection:
+      type: object
+      properties:
+        provider:
+          type: string
+        voice_id:
+          type: string
+        style:
+          type: string
+        gender_hint:
+          type: string
+        locale:
+          type: string
+    SpeechSegmentInput:
+      type: object
+      required: [text]
+      properties:
+        id:
+          type: string
+        speaker:
+          type: string
+        text:
+          type: string
+        ssml:
+          type: string
+        voice:
+          $ref: '#/components/schemas/VoiceSelection'
+    SpeechSynthesisRequest:
+      type: object
+      properties:
+        text:
+          type: string
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpeechSegmentInput'
+        provider:
+          type: string
+          default: auto
+        model:
+          type: string
+          default: tts-default
+        voice:
+          $ref: '#/components/schemas/VoiceSelection'
+        output_format:
+          type: string
+          enum: [mp3, wav]
+          default: mp3
+        speaking_rate:
+          type: number
+          default: 1
+        style:
+          type: string
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+        metadata:
+          type: object
+          additionalProperties: true
+    SpeechSynthesisResponse:
+      type: object
+      required: [artifacts]
+      properties:
+        provider:
+          type: string
+        model:
+          type: string
+        duration_ms:
+          type: integer
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpeechSegmentInput'
+    ChatRagRequest:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatMessage'
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        system_prompt:
+          type: string
+        style_preset:
+          type: string
+        citation_mode:
+          type: string
+          enum: [none, inline, separate]
+          default: separate
+        answer_style:
+          type: string
+        max_sources:
+          type: integer
+          minimum: 1
+        output_schema:
+          type: object
+          additionalProperties: true
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    ChatRagResponse:
+      type: object
+      required: [answer]
+      properties:
+        answer:
+          type: string
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        follow_up_questions:
+          type: array
+          items:
+            type: string
+        provider:
+          type: string
+        model:
+          type: string
+        usage:
+          $ref: '#/components/schemas/Usage'
+    CompareRequest:
+      type: object
+      required: [documents]
+      properties:
+        documents:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        mode:
+          type: string
+          enum: [pairwise, multi_document_summary, diff_focus, overlap_matrix]
+          default: pairwise
+        focus_topics:
+          type: array
+          items:
+            type: string
+        output_schema:
+          type: object
+          additionalProperties: true
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    CompareResponse:
+      type: object
+      properties:
+        summary:
+          type: string
+        metrics:
+          type: object
+          additionalProperties:
+            type: number
+        common_topics:
+          type: array
+          items:
+            type: string
+        unique_topics:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        conflicts:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        evidence_map:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    MindmapRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        max_depth:
+          type: integer
+          minimum: 1
+        target_branch_count:
+          type: integer
+          minimum: 1
+        target_children_per_branch:
+          type: integer
+          minimum: 1
+        layout_hint:
+          type: string
+        style_preset:
+          type: string
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    MindmapResponse:
+      type: object
+      required: [graph]
+      properties:
+        graph:
+          type: object
+          required: [nodes, edges]
+          properties:
+            nodes:
+              type: array
+              items:
+                $ref: '#/components/schemas/MindmapNode'
+            edges:
+              type: array
+              items:
+                $ref: '#/components/schemas/MindmapEdge'
+        summaries:
+          type: array
+          items:
+            type: string
+    MindmapNode:
+      type: object
+      required: [id, label]
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        node_type:
+          type: string
+        summary:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceRef'
+    MindmapEdge:
+      type: object
+      required: [source, target]
+      properties:
+        source:
+          type: string
+        target:
+          type: string
+        edge_type:
+          type: string
+        label:
+          type: string
+    QuizRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        question_count:
+          type: integer
+          minimum: 1
+          description: No fixed upper bound in the contract.
+        options_count:
+          type: integer
+          minimum: 2
+        allowed_types:
+          type: array
+          items:
+            type: string
+            enum:
+              - single_choice
+              - multiple_choice
+              - true_false
+              - short_answer
+              - match_pairs
+              - ordering
+              - fill_gap
+        difficulty:
+          type: string
+        audience_level:
+          type: string
+        language:
+          type: string
+        time_limit_seconds:
+          type: integer
+          minimum: 1
+        seed:
+          type: integer
+        previous_questions:
+          type: array
+          items:
+            type: string
+        explain_answers:
+          type: boolean
+          default: true
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    QuizResponse:
+      type: object
+      required:
+        - questions
+      properties:
+        title:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: '#/components/schemas/QuizQuestion'
+        scoring_rules:
+          type: object
+          additionalProperties: true
+    QuizQuestion:
+      type: object
+      required:
+        - id
+        - type
+        - prompt
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        prompt:
+          type: string
+        options:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        correct_answer:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+            - type: object
+              additionalProperties: true
+        explanation:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        difficulty:
+          type: string
+        estimated_time_seconds:
+          type: integer
+    TableColumnSpec:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        data_type:
+          type: string
+        description:
+          type: string
+    TableRequest:
+      type: object
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        target_columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/TableColumnSpec'
+        max_rows:
+          type: integer
+          minimum: 1
+        typed_cells:
+          type: boolean
+          default: true
+        output_format:
+          type: string
+          enum: [json, csv, xlsx, markdown]
+          default: json
+        aggregation_mode:
+          type: string
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    TableResponse:
+      type: object
+      properties:
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/TableColumnSpec'
+        rows:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+    InfographicRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        mode:
+          type: string
+          enum:
+            - single_chart
+            - multi_chart
+            - kpi_cards
+            - timeline_infographic
+            - comparison_board
+        render_formats:
+          type: array
+          items:
+            type: string
+            enum: [png, svg, pdf]
+        palette_hint:
+          type: string
+        layout_hint:
+          type: string
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    InfographicResponse:
+      type: object
+      properties:
+        spec:
+          type: object
+          additionalProperties: true
+        narrative_summary:
+          type: string
+        captions:
+          type: array
+          items:
+            type: string
+        palette:
+          type: array
+          items:
+            type: string
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+    ReportRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        template_id:
+          type: string
+        section_rules:
+          type: object
+          additionalProperties: true
+        tone:
+          type: string
+        length:
+          type: string
+        language:
+          type: string
+        citation_style:
+          type: string
+        output_formats:
+          type: array
+          items:
+            type: string
+            enum: [markdown, html, pdf, docx]
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    ReportResponse:
+      type: object
+      properties:
+        title:
+          type: string
+        summary:
+          type: string
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportSection'
+        citations:
+          type: array
+          items:
+            $ref: '#/components/schemas/Citation'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+    ReportSection:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+    ProjectSummary:
+      type: object
+      required: [id, project_type, title, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        project_type:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+          enum: [draft, ready, rendering, completed, archived, failed]
+        version:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ProjectListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProjectSummary'
+        next_cursor:
+          type: string
+          nullable: true
+    ProjectCreateRequest:
+      type: object
+      required: [project_type, title]
+      properties:
+        project_type:
+          type: string
+          enum:
+            - presentation_project
+            - podcast_project
+            - video_project
+            - quiz_project
+            - report_project
+            - mindmap_project
+        title:
+          type: string
+        template_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        settings:
+          type: object
+          additionalProperties: true
+        content:
+          type: object
+          additionalProperties: true
+    ProjectPatchRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        settings:
+          type: object
+          additionalProperties: true
+        content:
+          type: object
+          additionalProperties: true
+    ExportRequest:
+      type: object
+      required: [formats]
+      properties:
+        formats:
+          type: array
+          items:
+            type: string
+            enum: [pptx, pdf, html, mp4, mp3, wav, srt, json, png, svg]
+        render_options:
+          type: object
+          additionalProperties: true
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    ExportResponse:
+      type: object
+      required: [project_id, artifacts]
+      properties:
+        project_id:
+          type: string
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+    PresentationTaskRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        template_id:
+          type: string
+        slide_count_hint:
+          type: integer
+          minimum: 1
+        audience:
+          type: string
+        tone:
+          type: string
+        language:
+          type: string
+        theme:
+          type: string
+        layout_strategy:
+          type: string
+        include_speaker_notes:
+          type: boolean
+          default: true
+        output_formats:
+          type: array
+          items:
+            type: string
+            enum: [pptx, pdf, html, mp4]
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    PresentationTaskResponse:
+      type: object
+      required: [project]
+      properties:
+        project:
+          $ref: '#/components/schemas/PresentationProject'
+    PodcastTaskRequest:
+      type: object
+      properties:
+        prompt:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        template_id:
+          type: string
+        objective:
+          type: string
+        audience:
+          type: string
+        duration_hint_minutes:
+          type: integer
+          minimum: 1
+        speaker_count:
+          type: integer
+          minimum: 1
+        narrator_mode:
+          type: boolean
+          default: false
+        voice_preferences:
+          type: array
+          items:
+            $ref: '#/components/schemas/VoiceSelection'
+        music_policy:
+          type: string
+        render_formats:
+          type: array
+          items:
+            type: string
+            enum: [mp3, wav, srt, json, mp4]
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    PodcastTaskResponse:
+      type: object
+      required: [project]
+      properties:
+        project:
+          $ref: '#/components/schemas/PodcastProject'
+    VideoTaskRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        mode:
+          type: string
+          enum: [audiogram, narrated_presentation, scene_based_explainer]
+        source_project_id:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        aspect_ratio:
+          type: string
+          example: '16:9'
+        caption_mode:
+          type: string
+          enum: [none, burned_in, sidecar]
+        render_profile:
+          type: object
+          additionalProperties: true
+        scene_generation:
+          type: object
+          additionalProperties: true
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    VideoTaskResponse:
+      type: object
+      required: [project]
+      properties:
+        project:
+          $ref: '#/components/schemas/VideoProject'
+    GenericProject:
+      type: object
+      required: [id, project_type, title, status, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        project_type:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        version:
+          type: integer
+        template_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        settings:
+          type: object
+          additionalProperties: true
+        content:
+          type: object
+          additionalProperties: true
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SlideBlock:
+      type: object
+      required: [kind]
+      properties:
+        kind:
+          type: string
+          enum:
+            - text
+            - bullet_list
+            - table
+            - chart
+            - quote
+            - image
+            - callout
+            - timeline
+            - comparison
+            - kpi_card
+        data:
+          type: object
+          additionalProperties: true
+    Slide:
+      type: object
+      required: [id, kind, title]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        title:
+          type: string
+        subtitle:
+          type: string
+        blocks:
+          type: array
+          items:
+            $ref: '#/components/schemas/SlideBlock'
+        speaker_notes:
+          type: string
+        source_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceRef'
+        layout:
+          type: string
+        visual_hints:
+          type: object
+          additionalProperties: true
+        metadata:
+          type: object
+          additionalProperties: true
+    PresentationProject:
+      type: object
+      required: [id, project_type, title, status, slides, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        project_type:
+          type: string
+          enum: [presentation_project]
+        title:
+          type: string
+        status:
+          type: string
+          enum: [draft, ready, rendering, completed, archived, failed]
+        version:
+          type: integer
+        template_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        settings:
+          type: object
+          additionalProperties: true
+        source_inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        theme:
+          type: string
+        slides:
+          type: array
+          items:
+            $ref: '#/components/schemas/Slide'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    SpeakerProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        display_name:
+          type: string
+        role:
+          type: string
+        voice:
+          $ref: '#/components/schemas/VoiceSelection'
+    PodcastChapter:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        start_segment_id:
+          type: string
+        end_segment_id:
+          type: string
+    PodcastSegment:
+      type: object
+      required: [id, text]
+      properties:
+        id:
+          type: string
+        chapter_id:
+          type: string
+        speaker:
+          type: string
+        text:
+          type: string
+        ssml:
+          type: string
+        duration_estimate_ms:
+          type: integer
+        audio_artifact_id:
+          type: string
+        start_ms:
+          type: integer
+        end_ms:
+          type: integer
+        status:
+          type: string
+          enum: [draft, voiced, mixed]
+        metadata:
+          type: object
+          additionalProperties: true
+    PodcastProject:
+      type: object
+      required: [id, project_type, title, status, segments, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        project_type:
+          type: string
+          enum: [podcast_project]
+        title:
+          type: string
+        status:
+          type: string
+          enum: [draft, ready, rendering, completed, archived, failed]
+        version:
+          type: integer
+        template_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        settings:
+          type: object
+          additionalProperties: true
+        source_inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        speakers:
+          type: array
+          items:
+            $ref: '#/components/schemas/SpeakerProfile'
+        chapters:
+          type: array
+          items:
+            $ref: '#/components/schemas/PodcastChapter'
+        segments:
+          type: array
+          items:
+            $ref: '#/components/schemas/PodcastSegment'
+        voice_map:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties: true
+        music_tracks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        render_settings:
+          type: object
+          additionalProperties: true
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    VideoScene:
+      type: object
+      required: [id, title]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        narration_text:
+          type: string
+        duration_ms:
+          type: integer
+        asset_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceRef'
+        subtitle_text:
+          type: string
+        transition:
+          type: string
+        status:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    VideoProject:
+      type: object
+      required: [id, project_type, title, status, mode, scenes, created_at, updated_at]
+      properties:
+        id:
+          type: string
+        project_type:
+          type: string
+          enum: [video_project]
+        title:
+          type: string
+        status:
+          type: string
+          enum: [draft, ready, rendering, completed, archived, failed]
+        version:
+          type: integer
+        template_id:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+        settings:
+          type: object
+          additionalProperties: true
+        mode:
+          type: string
+          enum: [audiogram, narrated_presentation, scene_based_explainer]
+        source_inputs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceInput'
+        scenes:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoScene'
+        audio_tracks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        subtitle_tracks:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        assets:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        render_profile:
+          type: object
+          additionalProperties: true
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ProjectEnvelope:
+      oneOf:
+        - $ref: '#/components/schemas/PresentationProject'
+        - $ref: '#/components/schemas/PodcastProject'
+        - $ref: '#/components/schemas/VideoProject'
+        - $ref: '#/components/schemas/GenericProject'
+    AddSlideRequest:
+      type: object
+      required: [slide]
+      properties:
+        after_slide_id:
+          type: string
+        slide:
+          $ref: '#/components/schemas/Slide'
+    UpdateSlideRequest:
+      type: object
+      properties:
+        move_after_slide_id:
+          type: string
+        slide_patch:
+          type: object
+          additionalProperties: true
+    RegenerateSlideRequest:
+      type: object
+      properties:
+        instructions:
+          type: string
+        fields:
+          type: array
+          items:
+            type: string
+            enum: [title, subtitle, blocks, speaker_notes, visual_hints]
+        generation:
+          $ref: '#/components/schemas/GenerationOptions'
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    UpdateSegmentRequest:
+      type: object
+      properties:
+        speaker:
+          type: string
+        text:
+          type: string
+        ssml:
+          type: string
+        voice:
+          $ref: '#/components/schemas/VoiceSelection'
+        metadata:
+          type: object
+          additionalProperties: true
+    RerenderSegmentRequest:
+      type: object
+      properties:
+        voice:
+          $ref: '#/components/schemas/VoiceSelection'
+        output_format:
+          type: string
+          enum: [mp3, wav]
+        speaking_rate:
+          type: number
+        style:
+          type: string
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    UpdateSceneRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        narration_text:
+          type: string
+        duration_ms:
+          type: integer
+        asset_refs:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourceRef'
+        subtitle_text:
+          type: string
+        transition:
+          type: string
+        metadata:
+          type: object
+          additionalProperties: true
+    RerenderSceneRequest:
+      type: object
+      properties:
+        render_profile:
+          type: object
+          additionalProperties: true
+        regenerate_visuals:
+          type: boolean
+          default: false
+        execution:
+          $ref: '#/components/schemas/ExecutionOptions'
+    JobListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Job'
+        next_cursor:
+          type: string
+          nullable: true
+    ArtifactListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Artifact'
+        next_cursor:
+          type: string
+          nullable: true
+    Template:
+      type: object
+      required: [id, kind, version]
+      properties:
+        id:
+          type: string
+        kind:
+          type: string
+        version:
+          type: string
+        system_prompt:
+          type: string
+        instructions:
+          type: string
+        defaults:
+          type: object
+          additionalProperties: true
+        schema:
+          type: object
+          additionalProperties: true
+        constraints:
+          type: object
+          additionalProperties: true
+    TemplateListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Template'

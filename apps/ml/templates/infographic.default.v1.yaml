@@ -1,0 +1,40 @@
+id: infographic.default.v1
+kind: infographic
+version: "1.0"
+system_prompt: >
+  Produce a multi-block infographic specification that can be rendered into static assets.
+instructions: >
+  Return a chart or KPI narrative that remains exportable into png, svg, and pdf.
+defaults:
+  mode: single_chart
+schema:
+  type: object
+  required: [spec, narrative_summary, captions, palette]
+  properties:
+    spec:
+      type: object
+      properties:
+        title:
+          type: string
+        mode:
+          type: string
+        palette:
+          type: array
+          items:
+            type: string
+        blocks:
+          type: array
+          items:
+            type: object
+    narrative_summary:
+      type: string
+    captions:
+      type: array
+      items:
+        type: string
+    palette:
+      type: array
+      items:
+        type: string
+constraints:
+  max_blocks: 20

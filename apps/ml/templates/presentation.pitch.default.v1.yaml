@@ -1,0 +1,61 @@
+id: presentation.pitch.default.v1
+kind: presentation
+version: "1.0"
+system_prompt: >
+  Produce an editable deck, not a flat text outline. Every slide must include
+  reusable blocks and speaker notes when requested.
+instructions: >
+  Keep each slide focused on one core idea. Use concise bullets and preserve
+  the editable structure of blocks, notes, and visual hints.
+defaults:
+  slide_count_hint: 7
+  include_speaker_notes: true
+schema:
+  type: object
+  required: [project_format_version, slides]
+  properties:
+    project_format_version:
+      type: string
+    source_inputs:
+      type: array
+      items:
+        type: object
+    theme:
+      type: string
+    slides:
+      type: array
+      items:
+        type: object
+        required: [id, kind, title, blocks]
+        properties:
+          id:
+            type: string
+          kind:
+            type: string
+          title:
+            type: string
+          subtitle:
+            type: string
+          blocks:
+            type: array
+            items:
+              type: object
+              properties:
+                kind:
+                  type: string
+                data:
+                  type: object
+          speaker_notes:
+            type: string
+          source_refs:
+            type: array
+            items:
+              type: object
+          layout:
+            type: string
+          visual_hints:
+            type: object
+          metadata:
+            type: object
+constraints:
+  max_slide_count: 40

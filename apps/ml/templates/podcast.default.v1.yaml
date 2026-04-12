@@ -1,0 +1,86 @@
+id: podcast.popular.default.v1
+kind: podcast
+version: "1.0"
+system_prompt: >
+  Build a podcast as an editable audio project with speakers, segments, and render settings.
+instructions: >
+  Separate planning, script, and rendering concerns. Make every segment rerenderable.
+defaults:
+  speaker_count: 2
+  narrator_mode: false
+schema:
+  type: object
+  required: [project_format_version, speakers, chapters, segments, voice_map, render_settings]
+  properties:
+    project_format_version:
+      type: string
+    source_inputs:
+      type: array
+      items:
+        type: object
+    speakers:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          display_name:
+            type: string
+          role:
+            type: string
+          voice:
+            type: object
+    chapters:
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          title:
+            type: string
+          summary:
+            type: string
+          start_segment_id:
+            type: string
+          end_segment_id:
+            type: string
+    segments:
+      type: array
+      items:
+        type: object
+        required: [id, text]
+        properties:
+          id:
+            type: string
+          chapter_id:
+            type: string
+          speaker:
+            type: string
+          text:
+            type: string
+          ssml:
+            type: string
+          duration_estimate_ms:
+            type: integer
+          audio_artifact_id:
+            type: string
+          start_ms:
+            type: integer
+          end_ms:
+            type: integer
+          status:
+            type: string
+          metadata:
+            type: object
+    voice_map:
+      type: object
+    music_tracks:
+      type: array
+      items:
+        type: object
+    render_settings:
+      type: object
+constraints:
+  max_segment_count: 200

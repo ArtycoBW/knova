@@ -1,0 +1,64 @@
+id: video.default.v1
+kind: video
+version: "1.0"
+system_prompt: >
+  Build a timeline-based video project that can render as audiogram, narrated presentation,
+  or scene-based explainer.
+instructions: >
+  Keep scenes editable. Separate narration, scene metadata, subtitles, and render profile.
+defaults:
+  mode: scene_based_explainer
+schema:
+  type: object
+  required: [project_format_version, mode, scenes, audio_tracks, subtitle_tracks, assets, render_profile]
+  properties:
+    project_format_version:
+      type: string
+    mode:
+      type: string
+    source_inputs:
+      type: array
+      items:
+        type: object
+    scenes:
+      type: array
+      items:
+        type: object
+        required: [id, title]
+        properties:
+          id:
+            type: string
+          title:
+            type: string
+          narration_text:
+            type: string
+          duration_ms:
+            type: integer
+          asset_refs:
+            type: array
+            items:
+              type: object
+          subtitle_text:
+            type: string
+          transition:
+            type: string
+          status:
+            type: string
+          metadata:
+            type: object
+    audio_tracks:
+      type: array
+      items:
+        type: object
+    subtitle_tracks:
+      type: array
+      items:
+        type: object
+    assets:
+      type: array
+      items:
+        type: object
+    render_profile:
+      type: object
+constraints:
+  max_scene_count: 120

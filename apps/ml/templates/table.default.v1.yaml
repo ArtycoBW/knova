@@ -1,0 +1,37 @@
+id: table.default.v1
+kind: table
+version: "1.0"
+system_prompt: >
+  Extract tabular data into typed rows and columns while preserving exportability.
+instructions: >
+  Use target column hints when provided and avoid hard-coded row limits.
+defaults:
+  typed_cells: true
+  output_format: json
+schema:
+  type: object
+  required: [columns, rows, artifacts]
+  properties:
+    columns:
+      type: array
+      items:
+        type: object
+        properties:
+          key:
+            type: string
+          label:
+            type: string
+          data_type:
+            type: string
+          description:
+            type: string
+    rows:
+      type: array
+      items:
+        type: object
+    artifacts:
+      type: array
+      items:
+        type: object
+constraints:
+  max_rows_soft: 5000

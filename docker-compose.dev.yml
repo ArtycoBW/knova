@@ -50,6 +50,60 @@ services:
     #           count: 1
     #           capabilities: [gpu]
 
+  ml-api:
+    build:
+      context: .
+      dockerfile: ./apps/ml/Dockerfile
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://knova:knova_secret@postgres:5432/knova
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OLLAMA_BASE_URL: http://ollama:11434
+      AI_SERVICE_DB_SCHEMA: ml
+      AI_SERVICE_DISABLE_AUTH: "true"
+      AI_SERVICE_INLINE_ASYNC_JOBS: "false"
+      AI_SERVICE_ARTIFACT_ROOT: /app/data
+      AI_SERVICE_TEMPLATE_DIR: /app/apps/ml/templates
+    ports:
+      - "8000:8000"
+    volumes:
+      - ml_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  ml-worker:
+    build:
+      context: .
+      dockerfile: ./apps/ml/Dockerfile
+    command: ["arq", "ml_service.workers.settings.WorkerSettings"]
+    environment:
+      NODE_ENV: development
+      DATABASE_URL: postgresql://knova:knova_secret@postgres:5432/knova
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      OLLAMA_BASE_URL: http://ollama:11434
+      AI_SERVICE_DB_SCHEMA: ml
+      AI_SERVICE_DISABLE_AUTH: "true"
+      AI_SERVICE_INLINE_ASYNC_JOBS: "false"
+      AI_SERVICE_ARTIFACT_ROOT: /app/data
+      AI_SERVICE_TEMPLATE_DIR: /app/apps/ml/templates
+    volumes:
+      - ml_data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
 volumes:
   postgres_data:
   ollama_data:
+  ml_data:
